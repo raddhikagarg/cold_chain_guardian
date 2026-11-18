@@ -1,0 +1,40 @@
+/* ---------- Historical record detail ---------- */
+
+.history-detail__demo {
+  align-items: center;
+}
+
+.history-detail__demo .mock-chip {
+  flex-shrink: 0;
+}
+
+.history-actions__copy {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.history-actions__confirm {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(250, 204, 21, 0.25);
+  background: rgba(250, 204, 21, 0.06);
+}
+
+.history-actions__confirm p {
+  margin: 0 0 11px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.history-actions__confirm strong {
+  color: var(--text-primary);
+}
+
+@media (max-width: 700px) {
+  .history-detail__demo {
+    align-items: flex-start;
+  }
+}

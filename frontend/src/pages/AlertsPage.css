@@ -1,0 +1,17 @@
+/* ============================================================
+   Alerts section (queue / detail)
+   Shared chrome (.panel, .page-head, .btn, .notice, .empty-state,
+   .filter-select, .search-box) comes from the existing pages.
+   ============================================================ */
+
+.alerts-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .alerts-page {
+    gap: 14px;
+  }
+}

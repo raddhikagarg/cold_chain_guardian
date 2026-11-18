@@ -1,0 +1,84 @@
+/* ---------- Shipment timeline ---------- */
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 0 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline__item {
+  position: relative;
+  padding: 0 0 18px 26px;
+}
+
+.timeline__item::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: 0;
+  width: 1px;
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.timeline__item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline__item:last-child::before {
+  display: none;
+}
+
+.timeline__dot {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.timeline__item--ok .timeline__dot {
+  background: var(--green);
+  box-shadow: 0 0 0 1px var(--green);
+}
+
+.timeline__item--warn .timeline__dot {
+  background: var(--yellow);
+  box-shadow: 0 0 0 1px var(--yellow);
+}
+
+.timeline__item--critical .timeline__dot {
+  background: var(--red);
+  box-shadow: 0 0 0 1px var(--red);
+}
+
+.timeline__item--muted .timeline__dot {
+  background: var(--text-muted);
+  box-shadow: 0 0 0 1px var(--text-muted);
+}
+
+.timeline__time {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline__title {
+  margin: 1px 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.timeline__description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}

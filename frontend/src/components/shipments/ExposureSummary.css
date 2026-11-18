@@ -1,0 +1,58 @@
+/* ---------- Cumulative exposure summary ---------- */
+
+.exposure-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.exposure-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(148, 163, 184, 0.035);
+}
+
+.exposure-item__label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+
+.exposure-item__value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.2px;
+}
+
+.exposure-item--warn {
+  border-color: rgba(250, 204, 21, 0.22);
+  background: rgba(250, 204, 21, 0.045);
+}
+
+.exposure-item--warn .exposure-item__value {
+  color: var(--yellow);
+}
+
+.exposure-item--ok .exposure-item__value {
+  color: var(--green);
+}
+
+@media (max-width: 900px) {
+  .exposure-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .exposure-grid {
+    grid-template-columns: 1fr;
+  }
+}

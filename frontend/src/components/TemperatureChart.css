@@ -1,0 +1,126 @@
+/* ---------- Temperature chart ---------- */
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+
+.chart-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chart-card__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.chart-card__subtitle {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.chart-card__legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.chart-card__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-card__swatch--line {
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+  background: #38bdf8;
+}
+
+.chart-card__swatch--band {
+  width: 16px;
+  height: 10px;
+  border-radius: 3px;
+  background: rgba(34, 197, 94, 0.18);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.chart-card__swatch--dash {
+  width: 16px;
+  height: 0;
+  border-top: 2px dashed rgba(239, 68, 68, 0.7);
+}
+
+.chart-card__stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.chart-card__stats strong {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-card__stat--alert {
+  color: var(--red) !important;
+}
+
+.chart-card__stats-note {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.chart-card__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 230px;
+}
+
+.chart-card__axis-text {
+  fill: #64748b;
+  font-size: 11px;
+  font-family: var(--sans);
+}
+
+.chart-card__threshold-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  font-family: var(--sans);
+}
+
+.chart-card__threshold-label--max {
+  fill: rgba(248, 113, 113, 0.85);
+}
+
+.chart-card__threshold-label--min {
+  fill: rgba(125, 211, 252, 0.85);
+}

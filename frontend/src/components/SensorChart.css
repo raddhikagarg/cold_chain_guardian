@@ -1,0 +1,28 @@
+/* ---------- Generic sensor chart ---------- */
+
+.sensor-chart {
+  width: 100%;
+}
+
+.sensor-chart__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 210px;
+}
+
+.sensor-chart__axis-text {
+  fill: #64748b;
+  font-size: 11px;
+  font-family: var(--sans);
+}
+
+.sensor-chart__empty {
+  display: grid;
+  place-items: center;
+  min-height: 210px;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.04);
+  color: var(--text-muted);
+  font-size: 13px;
+}

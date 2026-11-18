@@ -1,0 +1,168 @@
+/* ============================================================
+   History section (completed + archived shipment records)
+   ============================================================ */
+
+.history-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.history-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-table__header {
+  display: grid;
+  grid-template-columns:
+    minmax(200px, 1.35fr) minmax(170px, 1.2fr) minmax(150px, 1fr)
+    minmax(150px, 1fr) 110px 20px;
+  gap: 14px;
+  padding: 0 12px 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+
+.shipment-row.history-row {
+  grid-template-columns:
+    minmax(200px, 1.35fr) minmax(170px, 1.2fr) minmax(150px, 1fr)
+    minmax(150px, 1fr) 110px 20px;
+}
+
+.history-row__cell {
+  display: flex;
+  min-width: 0;
+}
+
+.history-row__cell--identity {
+  flex-direction: column;
+  gap: 1px;
+}
+
+.history-row__id {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+
+.history-row__demo {
+  font-size: 8.5px;
+  padding: 1px 6px;
+  letter-spacing: 0.5px;
+}
+
+.history-row__cell--route {
+  flex-direction: column;
+  gap: 1px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.history-row__cell--completion,
+.history-row__cell--records {
+  flex-direction: column;
+  gap: 1px;
+}
+
+.history-row__primary {
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-row__secondary {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-row__cell--status {
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1180px) {
+  .history-table__header,
+  .shipment-row.history-row {
+    grid-template-columns:
+      minmax(190px, 1.4fr) minmax(160px, 1.2fr)
+      minmax(140px, 1fr) 110px 20px;
+  }
+
+  .history-table__header span:nth-child(4),
+  .history-row__cell--records {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .history-table__header {
+    display: none;
+  }
+
+  .history-table {
+    gap: 8px;
+  }
+
+  .shipment-row.history-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px 14px;
+    padding: 13px;
+    border-color: var(--border);
+  }
+
+  .history-row__cell--identity {
+    flex: 1 1 auto;
+  }
+
+  .history-row__cell--route {
+    flex: 1 1 100%;
+    order: 5;
+  }
+
+  .history-row__cell--completion {
+    flex: 1 1 100%;
+    order: 6;
+  }
+
+  .history-row__cell--records {
+    display: flex;
+    flex: 1 1 100%;
+    order: 7;
+  }
+
+  .history-row__cell--status {
+    flex: 0 1 auto;
+    justify-content: flex-end;
+    order: 2;
+  }
+
+  .shipment-row.history-row .shipment-row__chevron {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .history-page {
+    gap: 14px;
+  }
+}
