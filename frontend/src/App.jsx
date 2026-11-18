@@ -296,7 +296,7 @@ function App() {
                     </div>
                   </section>
                 )}
-                <EventsFeed events={RECENT_EVENTS} />
+                <EventsFeed events={getAllAlerts(shipments).map(alert => ({ id: alert.id, type: alert.parameter || alert.systemType || 'Alert', detail: alert.message || alert.display?.message || `${alert.severity || 'Alert'} condition recorded`, severity: alert.severity || 'warning', time: alert.startedAt ? new Date(alert.startedAt).toLocaleString() : 'Time unavailable', device: alert.shipment?.deviceId || 'Device unavailable' }))} />
               </div>
 
               <ShipmentPanel shipment={selectedShipment} device={selectedDevice} />
