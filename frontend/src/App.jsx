@@ -178,13 +178,7 @@ function App() {
     if (!apiReady) return
     const interval = setInterval(() => {
       const active = shipments.find(s => s.status === 'in-transit' && s.deviceId)
-      if (active) api.readings(active.deviceId, { shipmentId: active.id, recordedAt: new Date().toISOString(), temperature: Number((3.5 + Math.random() * 2).toFixed(1)), humidity: Math.round(60 + Math.random() * 8), shock: Number((Math.random() * 0.4).toFixed(2)), light: Math.round(Math.random() * 20), ethylene: Number((Math.random() * 0.8).toFixed(2)), doorOpen: false }).then(() => api.shipment(active.id)).then(raw => { const fresh = fromApiShipment(raw); setShipments(prev => prev.map(s => s.id === active.id ? fresh : s)); setSeries(prev => [...prev.slice(1), fresh.latestReading?.temperature ?? prev[prev.length - 1]]; setHumidity(fresh.latestReading?.humidity ?? humidity) }).catch(error => setApiError('Demo telemetry: ' + error.message))
-      setSeries((previous) => {
-        const latest = previous[previous.length - 1]
-        const next = clamp(latest + (Math.random() * 0.7 - 0.35), 2.8, 7.6)
-        return [...previous.slice(1), Number(next.toFixed(1))]
-      })
-      setHumidity((previous) => Math.round(clamp(previous + (Math.random() * 3 - 1.5), 58, 66)))
+      if (active) api.readings(active.deviceId, { shipmentId: active.id, recordedAt: new Date().toISOString(), temperature: Number((3.5 + Math.random() * 2).toFixed(1)), humidity: Math.round(60 + Math.random() * 8), shock: Number((Math.random() * 0.4).toFixed(2)), light: Math.round(Math.random() * 20), ethylene: Number((Math.random() * 0.8).toFixed(2)), doorOpen: false }).then(() => api.shipment(active.id)).then(raw => { const fresh = fromApiShipment(raw); setShipments(prev => prev.map(s => s.id === active.id ? fresh : s)); setSeries(prev => [...prev.slice(1), fresh.latestReading?.temperature ?? prev[prev.length - 1]]); setHumidity(fresh.latestReading?.humidity ?? humidity) }).catch(error => setApiError('Demo telemetry: ' + error.message))
       setLastUpdated(formatClock(new Date()))
     }, 5000)
 
