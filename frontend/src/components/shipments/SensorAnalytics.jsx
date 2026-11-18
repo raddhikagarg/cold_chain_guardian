@@ -230,7 +230,9 @@ function SensorAnalytics({ shipment }) {
             <p className="sensor-panel__note">
               {historical
                 ? 'Simulated historical readings generated for this demo record — not actual recorded sensor data.'
-                : 'shipment.readings?.length ? 'Chart values come from readings stored by the backend ingestion API.' : 'No persisted sensor samples yet; fallback series is simulated and not physical data.''}
+                : shipment.readings?.length
+                  ? 'Chart values come from readings stored by the backend ingestion API.'
+                  : 'No persisted sensor samples yet. Any fallback series shown is simulated, not physical data.'}
             </p>
           </>
         )}
