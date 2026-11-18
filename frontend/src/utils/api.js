@@ -11,6 +11,7 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  health: () => request('/health'),
   shipment: (id) => request(`/shipments/${encodeURIComponent(id)}`),
   shipmentReadings: async (id) => { const result = await request(`/shipments/${encodeURIComponent(id)}/readings?limit=500&sort=recordedAt:asc`); return result.data ?? result },
   shipments: async () => {
