@@ -11,6 +11,7 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  shipment: (id) => request(`/shipments/${encodeURIComponent(id)}`),
   shipments: async () => {
     const list = await request('/shipments?limit=100&status=all')
     const rows = list.data ?? list
