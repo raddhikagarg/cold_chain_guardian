@@ -2,7 +2,6 @@ import { useState } from 'react'
 import SensorChart from '../SensorChart.jsx'
 import StatusBadge from '../StatusBadge.jsx'
 import { DEVICES, SENSOR_CATALOG, SENSOR_IDS } from '../../data/shipmentData.js'
-import { getMockSensorSeries } from '../../data/sensorMock.js'
 import {
   formatRange,
   formatSensorValue,
@@ -75,7 +74,7 @@ function SensorAnalytics({ shipment }) {
     !historical &&
     deviceConnectionState != null &&
     deviceConnectionState !== 'online'
-  const series = config.available ? (shipment.readings?.length ? shipment.readings.map(row => ({ timestamp: new Date(row.recordedAt).getTime(), value: activeSensor === 'door' ? (row.doorOpen ? 1 : 0) : row[activeSensor] })).filter(point => point.value != null) : getMockSensorSeries(shipment, activeSensor)) : []
+  const series = config.available ? (shipment.readings || []).map(row => ({ timestamp: new Date(row.recordedAt).getTime(), value: activeSensor === 'door' ? (row.doorOpen ? 1 : 0) : row[activeSensor] })).filter(point => point.value != null && Number.isFinite(point.timestamp)) : []
   const latest = series.length > 0 ? series[series.length - 1] : null
   const state = getReadingState(meta, config, latest)
   const warningRange = getMonitoringRange(config)
@@ -89,11 +88,11 @@ function SensorAnalytics({ shipment }) {
           <p className="panel__subtitle">
             {historical
               ? 'Simulated 24 hours before recorded completion · readings every 30 min'
-              : 'Persisted backend readings when available; demo fallback'}
+              : 'Persisted backend readings only; no synthetic fallback'}
           </p>
         </div>
         <StatusBadge tone={historical ? 'warn' : 'muted'}>
-          {historical ? 'Simulated historical readings' : 'Demo telemetry'}
+          {historical ? 'Simulated historical readings' : 'Backend telemetry'}
         </StatusBadge>
       </header>
 
