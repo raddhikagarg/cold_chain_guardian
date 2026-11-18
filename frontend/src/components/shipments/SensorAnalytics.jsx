@@ -230,7 +230,7 @@ function SensorAnalytics({ shipment }) {
             <p className="sensor-panel__note">
               {historical
                 ? 'Simulated historical readings generated for this demo record — not actual recorded sensor data.'
-                : 'Demonstration readings generated locally around the configured range. No ESP32 data is connected yet.'}
+                : 'shipment.readings?.length ? 'Chart values come from readings stored by the backend ingestion API.' : 'No persisted sensor samples yet; fallback series is simulated and not physical data.''}
             </p>
           </>
         )}
