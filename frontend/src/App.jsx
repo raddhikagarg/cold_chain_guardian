@@ -100,9 +100,7 @@ function App() {
   const [devices, setDevices] = useState([])
   const [apiError, setApiError] = useState('')
   const [apiReady, setApiReady] = useState(false)
-  const [selectedShipmentId, setSelectedShipmentId] = useState(() =>
-    getDefaultShipmentId(INITIAL_SHIPMENTS),
-  )
+  const [selectedShipmentId, setSelectedShipmentId] = useState('')
   const [series, setSeries] = useState(TEMPERATURE_SERIES)
   const [humidity, setHumidity] = useState(HUMIDITY)
   const [lastUpdated, setLastUpdated] = useState(() => formatClock(new Date()))
@@ -135,33 +133,19 @@ function App() {
     setActiveSection('shipments')
   }
 
-  const handleCreateShipment = (shipment) => {
-    setShipments((previous) =>
-      previous.some((item) => item.id === shipment.id)
-        ? previous
-        : [shipment, ...previous],
-    )
+  const handleCreateShipment = async (shipment) => {
+    try { const response = await api.createShipment({ shipmentId: shipment.id, status: shipment.status, cargo: shipment.cargo, route: shipment.route, monitoring: shipment.monitoring, systemAlerts: shipment.systemAlerts, deviceId: shipment.deviceId }); const normalized = fromApiShipment(response); setShipments(previous => previous.some(item => item.id === normalized.id) ? previous : [normalized, ...previous]); setApiError('') } catch (error) { setApiError(error.message) }
   }
 
   // Delivery is only recorded through an explicit operator action here.
   // Alerts keep their existing status — completion never resolves them.
-  const handleConfirmDelivery = (shipmentId) => {
-    setShipments((previous) =>
-      previous.map((shipment) =>
-        shipment.id === shipmentId
-          ? completeShipment(shipment, { source: 'operator' })
-          : shipment,
-      ),
-    )
+  const handleConfirmDelivery = async (shipmentId) => {
+    try { const updated = fromApiShipment(await api.complete(shipmentId)); setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message) }
   }
 
   // Archiving retains every part of the record; nothing is deleted.
-  const handleArchiveShipment = (shipmentId) => {
-    setShipments((previous) =>
-      previous.map((shipment) =>
-        shipment.id === shipmentId ? archiveShipment(shipment) : shipment,
-      ),
-    )
+  const handleArchiveShipment = async (shipmentId) => {
+    try { const updated = fromApiShipment(await api.archive(shipmentId)); setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message) }
   }
 
   // Acknowledge and resolve stay separate actions; both update the alert that
@@ -189,9 +173,12 @@ function App() {
     )
   }
 
-  // Simulated live telemetry — purely mock, no backend or hardware involved.
+  // Demo telemetry is deliberately labeled simulated; it uses the same backend ingestion endpoint as the ESP32.
   useEffect(() => {
+    if (!apiReady) return
     const interval = setInterval(() => {
+      const active = shipments.find(s => s.status === 'in-transit' && s.deviceId)
+      if (active) api.readings(active.deviceId, { shipmentId: active.id, recordedAt: new Date().toISOString(), temperature: Number((3.5 + Math.random() * 2).toFixed(1)), humidity: Math.round(60 + Math.random() * 8), shock: Number((Math.random() * 0.4).toFixed(2)), light: Math.round(Math.random() * 20), ethylene: Number((Math.random() * 0.8).toFixed(2)), doorOpen: false }).catch(error => setApiError('Demo telemetry: ' + error.message))
       setSeries((previous) => {
         const latest = previous[previous.length - 1]
         const next = clamp(latest + (Math.random() * 0.7 - 0.35), 2.8, 7.6)
@@ -256,7 +243,9 @@ function App() {
           lastUpdated={lastUpdated}
         />
 
-        <main className="app__content">\n          {apiError && <div className="notice notice--error" role="alert">Backend: {apiError}</div>}\n          {!apiReady && <div className="notice notice--info">Connecting to backend APIs…</div>}
+        <main className="app__content">
+          {apiError && <div className="notice notice--error" role="alert">Backend: {apiError}</div>}
+          {!apiReady && <div className="notice notice--info">Connecting to backend APIs…</div>}
           {activeSection === 'overview' && (
             <>
               <ShipmentSelector
@@ -357,7 +346,7 @@ function App() {
 
           {activeSection === 'devices' && (
             <DevicesPage
-              devices={DEVICES}
+              devices={devices}
               shipments={shipments}
               onOpenShipment={handleOpenShipment}
             />
