@@ -14,6 +14,7 @@ function ShipmentsPage({
   devices,
   onCreateShipment,
   onConfirmDelivery,
+  onDepartShipment,
   initialShipmentId = null,
   onInitialShipmentConsumed,
 }) {
@@ -36,22 +37,28 @@ function ShipmentsPage({
 
   const selectedShipment = shipments.find((shipment) => shipment.id === selectedId) ?? null
 
-  const handleSaved = (shipment, savedAsDraft) => {
-    onCreateShipment(shipment)
-    setSelectedId(shipment.id)
-    setView('detail')
-    setNotice(
-      savedAsDraft
-        ? `${shipment.id} saved as a draft. Assign a device and confirm monitoring requirements when ready.`
-        : `${shipment.id} created and scheduled${shipment.deviceId ? ` on ${shipment.deviceId}` : ''}.`,
-    )
+  const handleSaved = async (shipment, savedAsDraft) => {
+    try {
+      await onCreateShipment(shipment)
+      setSelectedId(shipment.id)
+      setView('detail')
+      setNotice(
+        savedAsDraft
+          ? `${shipment.id} saved as a draft. Assign a device and confirm monitoring requirements when ready.`
+          : `${shipment.id} created successfully.`,
+      )
+    } catch (error) {
+      setNotice(`Shipment was not saved: ${error.message}`)
+    }
   }
 
-  const handleConfirmDelivery = (shipmentId) => {
-    onConfirmDelivery?.(shipmentId)
-    setNotice(
-      `${shipmentId} delivery confirmed and moved to shipment history. Existing alerts were not resolved automatically.`,
-    )
+  const handleConfirmDelivery = async (shipmentId) => {
+    try {
+      await onConfirmDelivery?.(shipmentId)
+      setNotice(`${shipmentId} delivery updated successfully. Existing alerts were not resolved automatically.`)
+    } catch (error) {
+      setNotice(`Delivery update failed: ${error.message}`)
+    }
   }
 
   if (view === 'add') {
@@ -74,6 +81,7 @@ function ShipmentsPage({
         notice={notice}
         onDismissNotice={() => setNotice('')}
         onConfirmDelivery={handleConfirmDelivery}
+        onDepartShipment={onDepartShipment}
         onBack={() => {
           setView('list')
           setNotice('')

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { api, fromApiShipment, fromApiDevice } from './utils/api.js'
 import Sidebar from './components/Sidebar.jsx'
 import TopBar from './components/TopBar.jsx'
 import MetricCard from './components/MetricCard.jsx'
@@ -27,19 +28,8 @@ import {
   getDeviceRegistry,
   summarizeDevices,
 } from './utils/devices.js'
-import {
-  archiveShipment,
-  completeShipment,
-  getOperationalShipments,
-} from './utils/history.js'
-import {
-  TEMPERATURE_SERIES,
-  SAFE_TEMP_RANGE,
-  HUMIDITY,
-  CURRENT_SHIPMENT,
-  RECENT_EVENTS,
-} from './data/mockData.js'
-import { INITIAL_SHIPMENTS, DEVICES } from './data/shipmentData.js'
+import { getOperationalShipments } from './utils/history.js'
+import { SAFE_TEMP_RANGE } from './data/mockData.js'
 import './App.css'
 
 const SECTIONS = {
@@ -95,14 +85,37 @@ function getDefaultShipmentId(shipments) {
 
 function App() {
   const [activeSection, setActiveSection] = useState('overview')
-  const [shipments, setShipments] = useState(INITIAL_SHIPMENTS)
-  const [selectedShipmentId, setSelectedShipmentId] = useState(() =>
-    getDefaultShipmentId(INITIAL_SHIPMENTS),
-  )
-  const [series, setSeries] = useState(TEMPERATURE_SERIES)
-  const [humidity, setHumidity] = useState(HUMIDITY)
+  const [shipments, setShipments] = useState([])
+  const [devices, setDevices] = useState([])
+  const [apiError, setApiError] = useState('')
+  const [apiReady, setApiReady] = useState(false)
+  const [demoTelemetryEnabled, setDemoTelemetryEnabled] = useState(false)
+  const [selectedShipmentId, setSelectedShipmentId] = useState('')
+  const [series, setSeries] = useState([])
+  const [humidity, setHumidity] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(() => formatClock(new Date()))
   const [shipmentFocusId, setShipmentFocusId] = useState(null)
+
+  useEffect(() => {
+    let alive = true
+    const load = async () => {
+      try {
+        const [shipmentRows, deviceRows] = await Promise.all([api.shipments(), api.devices()])
+        if (!alive) return
+        const normalized = shipmentRows.map(fromApiShipment)
+        setShipments(normalized)
+        setDevices(deviceRows.map(fromApiDevice))
+        setSelectedShipmentId(getDefaultShipmentId(normalized))
+        setApiError('')
+      } catch (error) {
+        if (alive) setApiError(error.message || 'Could not connect to backend. Check API server and MongoDB.')
+      } finally {
+        if (alive) setApiReady(true)
+      }
+    }
+    load()
+    return () => { alive = false }
+  }, [])
 
   // Cross-navigation from Device Details into the assigned shipment.
   const handleOpenShipment = (shipmentId) => {
@@ -110,82 +123,53 @@ function App() {
     setActiveSection('shipments')
   }
 
-  const handleCreateShipment = (shipment) => {
-    setShipments((previous) =>
-      previous.some((item) => item.id === shipment.id)
-        ? previous
-        : [shipment, ...previous],
-    )
+  const handleCreateShipment = async (shipment) => {
+    try { const response = await api.createShipment({ shipmentId: shipment.id, status: shipment.status, cargo: shipment.cargo, route: shipment.route, monitoring: shipment.monitoring, systemAlerts: shipment.systemAlerts, deviceId: shipment.deviceId }); const normalized = fromApiShipment(response); setShipments(previous => previous.some(item => item.id === normalized.id) ? previous : [normalized, ...previous]); setApiError('') } catch (error) { setApiError(error.message); throw error }
   }
 
   // Delivery is only recorded through an explicit operator action here.
   // Alerts keep their existing status — completion never resolves them.
-  const handleConfirmDelivery = (shipmentId) => {
-    setShipments((previous) =>
-      previous.map((shipment) =>
-        shipment.id === shipmentId
-          ? completeShipment(shipment, { source: 'operator' })
-          : shipment,
-      ),
-    )
+  const handleDepartShipment = async (shipmentId) => { try { const updated = fromApiShipment(await api.depart(shipmentId)); setShipments(prev => prev.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message) } }
+
+  const handleConfirmDelivery = async (shipmentId) => {
+    try { const updated = fromApiShipment(await api.complete(shipmentId)); setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message); throw error }
   }
 
   // Archiving retains every part of the record; nothing is deleted.
-  const handleArchiveShipment = (shipmentId) => {
-    setShipments((previous) =>
-      previous.map((shipment) =>
-        shipment.id === shipmentId ? archiveShipment(shipment) : shipment,
-      ),
-    )
+  const handleArchiveShipment = async (shipmentId) => {
+    try { const updated = fromApiShipment(await api.archive(shipmentId)); setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message) }
   }
 
   // Acknowledge and resolve stay separate actions; both update the alert that
   // lives on the shipment so every screen sees the same status.
-  const handleAlertStatusChange = (shipmentId, alertId, status) => {
-    const now = new Date().toISOString()
-    setShipments((previous) =>
-      previous.map((shipment) => {
-        if (shipment.id !== shipmentId) return shipment
-        return {
-          ...shipment,
-          alerts: (shipment.alerts ?? []).map((alert) =>
-            alert.id === alertId
-              ? {
-                  ...alert,
-                  status,
-                  acknowledgedAt:
-                    status === 'acknowledged' ? now : alert.acknowledgedAt,
-                  resolvedAt: status === 'resolved' ? now : alert.resolvedAt,
-                }
-              : alert,
-          ),
-        }
-      }),
-    )
+  const handleAlertStatusChange = async (shipmentId, alertId, status) => {
+    try {
+      if (status === 'acknowledged') await api.acknowledgeAlert(alertId)
+      else if (status === 'resolved') await api.resolveAlert(alertId)
+      const updated = fromApiShipment(await api.shipment(shipmentId))
+      setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s))
+      setApiError('')
+    } catch (error) { setApiError(error.message); throw error }
   }
 
-  // Simulated live telemetry — purely mock, no backend or hardware involved.
+  // Demo telemetry is deliberately labeled simulated; it uses the same backend ingestion endpoint as the ESP32.
   useEffect(() => {
+    if (!apiReady || !demoTelemetryEnabled) return
     const interval = setInterval(() => {
-      setSeries((previous) => {
-        const latest = previous[previous.length - 1]
-        const next = clamp(latest + (Math.random() * 0.7 - 0.35), 2.8, 7.6)
-        return [...previous.slice(1), Number(next.toFixed(1))]
-      })
-      setHumidity((previous) => Math.round(clamp(previous + (Math.random() * 3 - 1.5), 58, 66)))
+      const active = shipments.find(s => s.lifecycleStatus === 'in-transit' && s.deviceId)
+      if (active) api.readings(active.deviceId, { shipmentId: active.id, recordedAt: new Date().toISOString(), temperature: Number((3.5 + Math.random() * 2).toFixed(1)), humidity: Math.round(60 + Math.random() * 8), shock: Number((Math.random() * 0.4).toFixed(2)), light: Math.round(Math.random() * 20), ethylene: Number((Math.random() * 0.8).toFixed(2)), doorOpen: false }).then(() => api.shipment(active.id)).then(async raw => { raw.readings = await api.shipmentReadings(active.id).catch(() => []); const fresh = fromApiShipment(raw); setShipments(prev => prev.map(s => s.id === active.id ? fresh : s)); setSeries(prev => [...prev.slice(1), fresh.latestReading?.temperature ?? prev[prev.length - 1]]); setHumidity(fresh.latestReading?.humidity ?? humidity); api.devices().then(rows => setDevices(rows.map(fromApiDevice))).catch(() => {}) }).catch(error => setApiError('Demo telemetry: ' + error.message))
       setLastUpdated(formatClock(new Date()))
-    }, 4000)
+    }, 5000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [apiReady, demoTelemetryEnabled, shipments])
 
-  const currentTemp = series[series.length - 1]
-  const criticalAlerts = RECENT_EVENTS.filter((event) => event.severity === 'critical').length
-  const warningAlerts = RECENT_EVENTS.filter((event) => event.severity === 'warning').length
-  const activeAlerts = criticalAlerts + warningAlerts
 
-  // Sidebar badge follows the real alert queue (active + acknowledged).
+  // Alert counters are calculated from backend shipment alert records only.
   const alertQueue = summarizeAlerts(getAllAlerts(shipments))
+  const criticalAlerts = alertQueue.critical
+  const warningAlerts = alertQueue.warning
+  const activeAlerts = alertQueue.active
 
   // The Overview only works with operational shipments. Drafts and
   // completed/archived records are excluded from the selector and analytics.
@@ -196,20 +180,22 @@ function App() {
     ) ??
     operationalShipments[0] ??
     null
+  const latestReading = selectedShipment?.latestReading ?? selectedShipment?.readings?.at(-1) ?? null
+  const currentTemp = latestReading?.temperature ?? series[series.length - 1] ?? null
+  const currentHumidity = latestReading?.humidity ?? humidity
 
   const selectedDevice = selectedShipment?.deviceId
-    ? (DEVICES.find((device) => device.id === selectedShipment.deviceId) ?? null)
+    ? (devices.find((device) => device.id === selectedShipment.deviceId) ?? null)
     : null
 
   // The top bar follows the real fleet registry. Only fresh heartbeats count
   // as connected; stale and offline devices never inflate this number.
   const deviceSummary = summarizeDevices(
-    getDeviceRegistry(DEVICES, shipments),
+    getDeviceRegistry(devices, shipments),
   )
 
-  const tempHealthy = currentTemp >= SAFE_TEMP_RANGE.min && currentTemp <= SAFE_TEMP_RANGE.max
-  const tempNearLimit =
-    currentTemp > SAFE_TEMP_RANGE.max - 0.5 || currentTemp < SAFE_TEMP_RANGE.min + 0.5
+  const tempHealthy = currentTemp != null && currentTemp >= SAFE_TEMP_RANGE.min && currentTemp <= SAFE_TEMP_RANGE.max
+  const tempNearLimit = currentTemp != null && (currentTemp > SAFE_TEMP_RANGE.max - 0.5 || currentTemp < SAFE_TEMP_RANGE.min + 0.5)
 
   const section = SECTIONS[activeSection]
 
@@ -232,6 +218,14 @@ function App() {
         />
 
         <main className="app__content">
+          {apiError && <div className="notice notice--error" role="alert">Backend: {apiError}</div>}
+          {!apiReady && <div className="notice notice--info">Connecting to backend APIs…</div>}
+          <div className="notice notice--info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span>Telemetry mode: <strong>{demoTelemetryEnabled ? 'SIMULATION ON' : 'SIMULATION OFF'}</strong> — generated samples are not physical sensor data.</span>
+            <button type="button" onClick={() => setDemoTelemetryEnabled(value => !value)} disabled={!apiReady}>
+              {demoTelemetryEnabled ? 'Stop simulation' : 'Start simulation'}
+            </button>
+          </div>
           {activeSection === 'overview' && (
             <>
               <ShipmentSelector
@@ -243,7 +237,7 @@ function App() {
               <section className="metrics" aria-label="Key metrics">
                 <MetricCard
                   label="Current Temperature"
-                  value={currentTemp.toFixed(1)}
+                  value={currentTemp == null ? '—' : currentTemp.toFixed(1)}
                   unit="°C"
                   icon={<ThermometerIcon size={18} />}
                   tone={!tempHealthy ? 'critical' : tempNearLimit ? 'warn' : 'ok'}
@@ -252,7 +246,7 @@ function App() {
                 />
                 <MetricCard
                   label="Humidity"
-                  value={humidity}
+                  value={currentHumidity ?? '—'}
                   unit="% RH"
                   icon={<DropletIcon size={18} />}
                   tone="ok"
@@ -269,11 +263,11 @@ function App() {
                 />
                 <MetricCard
                   label="Shipment Status"
-                  value="In Transit"
+                  value={selectedShipment?.status ?? 'No shipment'}
                   icon={<TruckIcon size={18} />}
                   tone="info"
                   status="On schedule"
-                  hint={`${CURRENT_SHIPMENT.id} · ${CURRENT_SHIPMENT.progress}% complete`}
+                  hint={selectedShipment ? `${selectedShipment.id} · route progress not GPS verified` : 'Select or create an operational shipment'}
                 />
               </section>
 
@@ -291,7 +285,7 @@ function App() {
                     </div>
                   </section>
                 )}
-                <EventsFeed events={RECENT_EVENTS} />
+                <EventsFeed events={getAllAlerts(shipments).map(alert => ({ id: alert.id, type: alert.parameter || alert.systemType || 'Alert', detail: alert.message || alert.display?.message || `${alert.severity || 'Alert'} condition recorded`, severity: alert.severity || 'warning', time: alert.startedAt ? new Date(alert.startedAt).toLocaleString() : 'Time unavailable', device: alert.shipment?.deviceId || 'Device unavailable' }))} />
               </div>
 
               <ShipmentPanel shipment={selectedShipment} device={selectedDevice} />
@@ -308,9 +302,10 @@ function App() {
           {activeSection === 'shipments' && (
             <ShipmentsPage
               shipments={shipments}
-              devices={DEVICES}
+              devices={devices}
               onCreateShipment={handleCreateShipment}
               onConfirmDelivery={handleConfirmDelivery}
+              onDepartShipment={handleDepartShipment}
               initialShipmentId={shipmentFocusId}
               onInitialShipmentConsumed={() => setShipmentFocusId(null)}
             />
@@ -332,7 +327,7 @@ function App() {
 
           {activeSection === 'devices' && (
             <DevicesPage
-              devices={DEVICES}
+              devices={devices}
               shipments={shipments}
               onOpenShipment={handleOpenShipment}
             />

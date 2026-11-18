@@ -16,7 +16,6 @@ import {
   SENSOR_CATALOG,
   SENSOR_IDS,
 } from '../../data/shipmentData.js'
-import { getMockSensorSeries } from '../../data/sensorMock.js'
 import {
   formatDateTime,
   formatSensorValue,
@@ -98,6 +97,7 @@ function ShipmentDetail({
   onDismissNotice,
   onBack,
   onConfirmDelivery,
+  onDepartShipment,
 }) {
   const [confirmingDelivery, setConfirmingDelivery] = useState(false)
 
@@ -130,13 +130,14 @@ function ShipmentDetail({
     if (!config?.available) {
       return { sensorId, available: false, enabled: false, configured: false, value: null }
     }
-    const series = getMockSensorSeries(shipment, sensorId)
+    const latest = shipment.latestReading
+    const realField = sensorId === 'door' ? 'doorOpen' : sensorId
     return {
       sensorId,
       available: true,
       enabled: config.enabled,
       configured: isMonitoringConfigured(config),
-      value: series[series.length - 1].value,
+      value: latest && latest[realField] != null ? latest[realField] : null,
     }
   })
 
@@ -277,6 +278,16 @@ function ShipmentDetail({
         </section>
       )}
 
+      {shipment.status === 'scheduled' && onDepartShipment && (
+        <section className="lifecycle-actions">
+          <div className="lifecycle-actions__text">
+            <strong>Shipment is scheduled</strong>
+            <span>Start the journey to enable live monitoring and sensor evaluation.</span>
+          </div>
+          <button type="button" className="btn btn--primary" onClick={() => onDepartShipment(shipment.id)}>Mark as in transit</button>
+        </section>
+      )}
+
       <div className="detail-grid detail-grid--split">
         <section className="panel">
           <header className="panel__head">
@@ -333,22 +344,10 @@ function ShipmentDetail({
 
           <div className="detail-progress">
             <div className="detail-progress__labels">
-              <span>Route progress</span>
-              <span>{progress}%</span>
+              <span>Location tracking</span>
+              <span>GPS not connected</span>
             </div>
-            <div
-              className="detail-progress__track"
-              role="progressbar"
-              aria-valuenow={progress}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Shipment route progress"
-            >
-              <span
-                className="detail-progress__fill"
-                style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-              />
-            </div>
+            <p className="sensor-panel__note">Origin and destination are shipment metadata. Live route progress requires a GPS/location device and is not measured by the current ESP32 telemetry.</p>
           </div>
         </section>
       </div>
@@ -400,7 +399,7 @@ function ShipmentDetail({
           <header className="panel__head">
             <div>
               <h2 className="panel__title">Current monitoring</h2>
-              <p className="panel__subtitle">Latest demonstration readings</p>
+              <p className="panel__subtitle">Persisted sensor data only</p>
             </div>
           </header>
 
@@ -422,9 +421,11 @@ function ShipmentDetail({
                   </span>
                   <span className="reading-tile__label">{meta.label}</span>
                   <span className="reading-tile__value">
-                    {reading.available
-                      ? formatSensorValue(reading.sensorId, reading.value)
-                      : 'Not fitted'}
+                    {!reading.available
+                      ? 'Not fitted'
+                      : reading.value == null
+                        ? 'No data'
+                        : formatSensorValue(reading.sensorId, reading.value)}
                   </span>
                   {reading.available && reading.enabled && !reading.configured && (
                     <StatusBadge tone="warn">Needs configuration</StatusBadge>
@@ -438,8 +439,7 @@ function ShipmentDetail({
           </div>
 
           <p className="panel__footnote">
-            Values are generated mock telemetry around the configured warning
-            range; they are not real sensor measurements yet.
+Tiles show only persisted backend readings. Simulated fallback is available in Sensor Analytics and is explicitly marked.
           </p>
         </section>
       </div>

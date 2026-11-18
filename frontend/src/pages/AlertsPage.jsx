@@ -31,21 +31,29 @@ function AlertsPage({ shipments, onAlertStatusChange }) {
   const selectedAlert =
     alerts.find((alert) => alert.id === selectedAlertId) ?? null
 
-  const handleAcknowledge = (alert) => {
-    onAlertStatusChange(alert.shipment.id, alert.id, 'acknowledged')
-    setNotice({
-      tone: 'info',
-      text: `${alert.id} acknowledged. This only records that the alert has been seen — it does not resolve the underlying condition.`,
-    })
+  const handleAcknowledge = async (alert) => {
+    try {
+      await onAlertStatusChange(alert.shipment.id, alert.id, 'acknowledged')
+      setNotice({
+        tone: 'info',
+        text: `${alert.id} acknowledged. This records that the alert has been seen; it does not resolve the underlying condition.`,
+      })
+    } catch (error) {
+      setNotice({ tone: 'error', text: `Could not acknowledge alert: ${error.message}` })
+    }
   }
 
-  const handleResolve = (alert) => {
-    onAlertStatusChange(alert.shipment.id, alert.id, 'resolved')
-    setNotice({
-      tone: 'success',
-      text: `${alert.id} resolved and moved to alert history.`,
-    })
-    setTab('history')
+  const handleResolve = async (alert) => {
+    try {
+      await onAlertStatusChange(alert.shipment.id, alert.id, 'resolved')
+      setNotice({
+        tone: 'success',
+        text: `${alert.id} resolved and moved to alert history.`,
+      })
+      setTab('history')
+    } catch (error) {
+      setNotice({ tone: 'error', text: `Could not resolve alert: ${error.message}` })
+    }
   }
 
   if (view === 'detail' && selectedAlert) {
