@@ -16,7 +16,6 @@ import {
   SENSOR_CATALOG,
   SENSOR_IDS,
 } from '../../data/shipmentData.js'
-import { getMockSensorSeries } from '../../data/sensorMock.js'
 import {
   formatDateTime,
   formatSensorValue,
@@ -131,7 +130,6 @@ function ShipmentDetail({
     if (!config?.available) {
       return { sensorId, available: false, enabled: false, configured: false, value: null }
     }
-    const series = getMockSensorSeries(shipment, sensorId)
     const latest = shipment.latestReading
     const realField = sensorId === 'door' ? 'doorOpen' : sensorId
     return {
@@ -139,7 +137,7 @@ function ShipmentDetail({
       available: true,
       enabled: config.enabled,
       configured: isMonitoringConfigured(config),
-      value: latest && latest[realField] != null ? latest[realField] : series[series.length - 1].value,
+      value: latest && latest[realField] != null ? latest[realField] : null,
     }
   })
 
@@ -401,7 +399,7 @@ function ShipmentDetail({
           <header className="panel__head">
             <div>
               <h2 className="panel__title">Current monitoring</h2>
-              <p className="panel__subtitle">Backend readings when available; simulated fallback is labeled</p>
+              <p className="panel__subtitle">Persisted sensor data only</p>
             </div>
           </header>
 
@@ -423,9 +421,11 @@ function ShipmentDetail({
                   </span>
                   <span className="reading-tile__label">{meta.label}</span>
                   <span className="reading-tile__value">
-                    {reading.available
-                      ? formatSensorValue(reading.sensorId, reading.value)
-                      : 'Not fitted'}
+                    {!reading.available
+                      ? 'Not fitted'
+                      : reading.value == null
+                        ? 'No data'
+                        : formatSensorValue(reading.sensorId, reading.value)}
                   </span>
                   {reading.available && reading.enabled && !reading.configured && (
                     <StatusBadge tone="warn">Needs configuration</StatusBadge>
@@ -439,7 +439,7 @@ function ShipmentDetail({
           </div>
 
           <p className="panel__footnote">
-            Latest persisted backend reading is shown when available; fallback tiles are demo-only.
+Tiles show only persisted backend readings. Simulated fallback is available in Sensor Analytics and is explicitly marked.
           </p>
         </section>
       </div>
