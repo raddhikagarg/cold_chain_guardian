@@ -37,15 +37,19 @@ function ShipmentsPage({
 
   const selectedShipment = shipments.find((shipment) => shipment.id === selectedId) ?? null
 
-  const handleSaved = (shipment, savedAsDraft) => {
-    onCreateShipment(shipment)
-    setSelectedId(shipment.id)
-    setView('detail')
-    setNotice(
-      savedAsDraft
-        ? `${shipment.id} saved as a draft. Assign a device and confirm monitoring requirements when ready.`
-        : `${shipment.id} created and scheduled${shipment.deviceId ? ` on ${shipment.deviceId}` : ''}.`,
-    )
+  const handleSaved = async (shipment, savedAsDraft) => {
+    try {
+      await onCreateShipment(shipment)
+      setSelectedId(shipment.id)
+      setView('detail')
+      setNotice(
+        savedAsDraft
+          ? `${shipment.id} saved as a draft. Assign a device and confirm monitoring requirements when ready.`
+          : `${shipment.id} created successfully.`,
+      )
+    } catch (error) {
+      setNotice(`Shipment was not saved: ${error.message}`)
+    }
   }
 
   const handleConfirmDelivery = (shipmentId) => {
