@@ -150,27 +150,14 @@ function App() {
 
   // Acknowledge and resolve stay separate actions; both update the alert that
   // lives on the shipment so every screen sees the same status.
-  const handleAlertStatusChange = (shipmentId, alertId, status) => {
-    const now = new Date().toISOString()
-    setShipments((previous) =>
-      previous.map((shipment) => {
-        if (shipment.id !== shipmentId) return shipment
-        return {
-          ...shipment,
-          alerts: (shipment.alerts ?? []).map((alert) =>
-            alert.id === alertId
-              ? {
-                  ...alert,
-                  status,
-                  acknowledgedAt:
-                    status === 'acknowledged' ? now : alert.acknowledgedAt,
-                  resolvedAt: status === 'resolved' ? now : alert.resolvedAt,
-                }
-              : alert,
-          ),
-        }
-      }),
-    )
+  const handleAlertStatusChange = async (shipmentId, alertId, status) => {
+    try {
+      if (status === 'acknowledged') await api.acknowledgeAlert(alertId)
+      else if (status === 'resolved') await api.resolveAlert(alertId)
+      const updated = fromApiShipment(await api.shipment(shipmentId))
+      setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s))
+      setApiError('')
+    } catch (error) { setApiError(error.message) }
   }
 
   // Demo telemetry is deliberately labeled simulated; it uses the same backend ingestion endpoint as the ESP32.
