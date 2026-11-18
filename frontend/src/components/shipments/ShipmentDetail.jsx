@@ -98,6 +98,7 @@ function ShipmentDetail({
   onDismissNotice,
   onBack,
   onConfirmDelivery,
+  onDepartShipment,
 }) {
   const [confirmingDelivery, setConfirmingDelivery] = useState(false)
 
@@ -276,6 +277,16 @@ function ShipmentDetail({
               Confirm delivery
             </button>
           )}
+        </section>
+      )}
+
+      {shipment.status === 'scheduled' && onDepartShipment && (
+        <section className="lifecycle-actions">
+          <div className="lifecycle-actions__text">
+            <strong>Shipment is scheduled</strong>
+            <span>Start the journey to enable live monitoring and sensor evaluation.</span>
+          </div>
+          <button type="button" className="btn btn--primary" onClick={() => onDepartShipment(shipment.id)}>Mark as in transit</button>
         </section>
       )}
 
