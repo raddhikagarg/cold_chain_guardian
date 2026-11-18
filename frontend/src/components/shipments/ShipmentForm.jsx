@@ -795,7 +795,7 @@ function ShipmentForm({ shipments, devices, onCreate, onSaveDraft, onCancel }) {
         <div className="form-actions">
           <p className="form-actions__hint">
             Drafts do not reserve a device and are not counted as active
-            shipments. This prototype stores everything in memory only.
+            shipments. Shipment records are saved to the backend database.
           </p>
           <div className="form-actions__buttons">
             <button type="button" className="btn btn--ghost" onClick={handleSaveDraft}>
