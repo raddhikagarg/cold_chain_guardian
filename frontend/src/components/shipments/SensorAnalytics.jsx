@@ -56,8 +56,7 @@ function getReadingState(meta, config, latest) {
 }
 
 /**
- * Works for every sensor type in the catalogue. Chart data currently comes
- * from getMockSensorSeries — swap that call for the ESP32 feed later.
+ * Works for every sensor type in the catalogue. Chart data prefers backend readings; demo data is fallback.
  */
 function SensorAnalytics({ shipment }) {
   const [activeSensor, setActiveSensor] = useState('temperature')
@@ -76,7 +75,7 @@ function SensorAnalytics({ shipment }) {
     !historical &&
     deviceConnectionState != null &&
     deviceConnectionState !== 'online'
-  const series = config.available ? getMockSensorSeries(shipment, activeSensor) : []
+  const series = config.available ? (shipment.readings?.length ? shipment.readings.map(row => ({ timestamp: new Date(row.recordedAt).getTime(), value: activeSensor === 'door' ? (row.doorOpen ? 1 : 0) : row[activeSensor] })).filter(point => point.value != null) : getMockSensorSeries(shipment, activeSensor)) : []
   const latest = series.length > 0 ? series[series.length - 1] : null
   const state = getReadingState(meta, config, latest)
   const warningRange = getMonitoringRange(config)
@@ -90,7 +89,7 @@ function SensorAnalytics({ shipment }) {
           <p className="panel__subtitle">
             {historical
               ? 'Simulated 24 hours before recorded completion · readings every 30 min'
-              : 'Last 24 hours · all six sensor types · readings every 30 min'}
+              : 'Persisted backend readings when available; demo fallback'}
           </p>
         </div>
         <StatusBadge tone={historical ? 'warn' : 'muted'}>
