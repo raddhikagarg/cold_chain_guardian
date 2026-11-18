@@ -191,6 +191,7 @@ function App() {
     return () => clearInterval(interval)
   }, [apiReady, shipments])
 
+
   const currentTemp = series[series.length - 1]
   const criticalAlerts = RECENT_EVENTS.filter((event) => event.severity === 'critical').length
   const warningAlerts = RECENT_EVENTS.filter((event) => event.severity === 'warning').length
