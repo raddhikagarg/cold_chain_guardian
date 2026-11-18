@@ -13,6 +13,11 @@ const {
 const {
   listDeviceReadings,
 } = require('../services/readingService')
+const {
+  getDeviceStatus,
+  getSensorAvailability,
+  getDeviceAvailability,
+} = require('../services/deviceApiService')
 
 async function register(req, res) {
   const device = await registerDevice(req.body)
@@ -30,6 +35,23 @@ async function get(req, res) {
   const device = await getDeviceDetail(req.params.deviceId)
   return sendData(res, device)
 }
+
+async function status(req, res) {
+  const result = await getDeviceStatus(req.params.deviceId)
+  return sendData(res, result)
+}
+
+async function sensors(req, res) {
+  const result = await getSensorAvailability(req.params.deviceId)
+  return sendData(res, result)
+}
+
+
+async function availability(req, res) {
+  const result = await getDeviceAvailability(req.params.deviceId)
+  return sendData(res, result)
+}
+
 
 async function heartbeat(req, res) {
   const device = await recordHeartbeat(req.params.deviceId, req.body ?? {})
@@ -68,6 +90,9 @@ module.exports = {
   register,
   list,
   get,
+  status,
+  sensors,
+  availability,
   heartbeat,
   selfTest,
   createEvent,
