@@ -100,7 +100,8 @@ function App() {
     let alive = true
     const load = async () => {
       try {
-        const [shipmentRows, deviceRows] = await Promise.all([api.shipments(), api.devices()])
+        const [health, shipmentRows, deviceRows] = await Promise.all([api.health(), api.shipments(), api.devices()])
+        if (health.status !== 'ok' || health.database !== 'connected') throw new Error(`Backend degraded (database: ${health.database || 'unknown'})`)
         if (!alive) return
         const normalized = shipmentRows.map(fromApiShipment)
         setShipments(normalized)
@@ -205,6 +206,8 @@ function App() {
         activeSection={activeSection}
         onNavigate={setActiveSection}
         alertCount={alertQueue.active}
+        backendStatus={apiError ? 'error' : apiReady ? 'connected' : 'connecting'}
+        backendMessage={apiError}
       />
 
       <div className="app__main">
