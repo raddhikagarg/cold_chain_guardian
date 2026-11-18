@@ -160,7 +160,7 @@ function App() {
       const updated = fromApiShipment(await api.shipment(shipmentId))
       setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s))
       setApiError('')
-    } catch (error) { setApiError(error.message) }
+    } catch (error) { setApiError(error.message); throw error }
   }
 
   // Demo telemetry is deliberately labeled simulated; it uses the same backend ingestion endpoint as the ESP32.
