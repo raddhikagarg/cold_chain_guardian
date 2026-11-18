@@ -18,6 +18,15 @@
    ```
    Vite proxies `/api` to localhost:5000. For a deployed API, set `VITE_API_BASE_URL` in frontend env.
 
+## Fast device registration for a dashboard-only test
+
+Before using the frontend, create a test device and mark it online with:
+```bash
+curl -X POST http://localhost:5000/api/devices -H "Content-Type: application/json" -d '{"deviceId":"ESP32-01","name":"Demo ESP32","status":"offline","connectivity":"Wi-Fi","firmware":"demo","sensors":["temperature","humidity","shock","light","door","ethylene"]}'
+curl -X POST http://localhost:5000/api/devices/ESP32-01/heartbeat -H "Content-Type: application/json" -d '{"battery":100,"signal":"Strong","signalDbm":-45,"firmware":"demo","connectivity":"Wi-Fi"}'
+```
+If you have already registered `ESP32-01`, skip the first command and just send heartbeat.
+
 ## ESP32 device onboarding
 
 Register each ESP32 once:
