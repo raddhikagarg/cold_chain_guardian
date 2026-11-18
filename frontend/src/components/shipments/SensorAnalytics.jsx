@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import SensorChart from '../SensorChart.jsx'
 import StatusBadge from '../StatusBadge.jsx'
-import { DEVICES, SENSOR_CATALOG, SENSOR_IDS } from '../../data/shipmentData.js'
+import { SENSOR_CATALOG, SENSOR_IDS } from '../../data/shipmentData.js'
 import {
   formatRange,
   formatSensorValue,
@@ -10,7 +10,6 @@ import {
   isMonitoringConfigured,
 } from '../../utils/shipments.js'
 import { isHistoricalShipment } from '../../utils/history.js'
-import { getDeviceConnectionState } from '../../utils/deviceState.js'
 import { SENSOR_ICONS } from './sensorIcons.jsx'
 
 function exceedsBounds(value, bounds) {
@@ -64,16 +63,9 @@ function SensorAnalytics({ shipment }) {
   const config = shipment.monitoring[activeSensor]
   const Icon = SENSOR_ICONS[activeSensor]
   const historical = isHistoricalShipment(shipment)
-  const device = shipment.deviceId
-    ? (DEVICES.find((item) => item.id === shipment.deviceId) ?? null)
-    : null
-  const deviceConnectionState = device
-    ? getDeviceConnectionState(device)
-    : null
-  const deviceReadingsStale =
-    !historical &&
-    deviceConnectionState != null &&
-    deviceConnectionState !== 'online'
+  const device = null
+  const deviceConnectionState = null
+  const deviceReadingsStale = false
   const series = config.available ? (shipment.readings || []).map(row => ({ timestamp: new Date(row.recordedAt).getTime(), value: activeSensor === 'door' ? (row.doorOpen ? 1 : 0) : row[activeSensor] })).filter(point => point.value != null && Number.isFinite(point.timestamp)) : []
   const latest = series.length > 0 ? series[series.length - 1] : null
   const state = getReadingState(meta, config, latest)
@@ -87,12 +79,12 @@ function SensorAnalytics({ shipment }) {
           <h2 className="panel__title">Sensor analytics</h2>
           <p className="panel__subtitle">
             {historical
-              ? 'Simulated 24 hours before recorded completion · readings every 30 min'
+              ? 'Recorded readings before shipment completion'
               : 'Persisted backend readings only; no synthetic fallback'}
           </p>
         </div>
         <StatusBadge tone={historical ? 'warn' : 'muted'}>
-          {historical ? 'Simulated historical readings' : 'Backend telemetry'}
+          {historical ? 'Historical backend readings' : 'Backend telemetry'}
         </StatusBadge>
       </header>
 
