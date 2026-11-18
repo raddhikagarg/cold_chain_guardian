@@ -266,7 +266,7 @@ function App() {
                   value={selectedShipment?.status ?? 'No shipment'}
                   icon={<TruckIcon size={18} />}
                   tone="info"
-                  status="On schedule"
+                  status={selectedShipment?.route?.arrival ? 'ETA available' : 'Status from backend'}
                   hint={selectedShipment ? `${selectedShipment.id} · route progress not GPS verified` : 'Select or create an operational shipment'}
                 />
               </section>
