@@ -28,6 +28,8 @@ export const api = {
     const result = await request('/devices?limit=100')
     return result.data ?? result
   },
+  acknowledgeAlert: (id) => request(`/alerts/${encodeURIComponent(id)}/acknowledge`, { method: 'POST', body: JSON.stringify({}) }),
+  resolveAlert: (id, resolutionNote = 'Resolved in dashboard', resolvedBy = 'operator') => request(`/alerts/${encodeURIComponent(id)}/resolve`, { method: 'POST', body: JSON.stringify({ resolutionNote, resolvedBy }) }),
   readings: (deviceId, payload) => request(`/devices/${encodeURIComponent(deviceId)}/readings`, { method: 'POST', body: JSON.stringify(payload) }),
 }
 
