@@ -137,13 +137,12 @@ function ShipmentList({ shipments, onAdd, onSelect }) {
       <div className="page-head">
         <div className="page-head__text">
           <div className="page-head__eyebrow">
-            <span className="mock-chip">Demo data</span>
+            <span className="mock-chip">Backend records</span>
             Cold-chain operations
           </div>
           <h1 className="page-head__title">All Shipments</h1>
           <p className="page-head__subtitle">
-            Fruits and vegetables moving through the cold chain. All records and
-            monitoring limits in this prototype are demonstration data.
+            Fruits and vegetables moving through the cold chain. Shipment records and monitoring limits are stored through the backend API.
           </p>
         </div>
 
