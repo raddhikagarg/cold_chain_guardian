@@ -28,19 +28,8 @@ import {
   getDeviceRegistry,
   summarizeDevices,
 } from './utils/devices.js'
-import {
-  archiveShipment,
-  completeShipment,
-  getOperationalShipments,
-} from './utils/history.js'
-import {
-  TEMPERATURE_SERIES,
-  SAFE_TEMP_RANGE,
-  HUMIDITY,
-  CURRENT_SHIPMENT,
-  RECENT_EVENTS,
-} from './data/mockData.js'
-import { INITIAL_SHIPMENTS, DEVICES } from './data/shipmentData.js'
+import { getOperationalShipments } from './utils/history.js'
+import { SAFE_TEMP_RANGE } from './data/mockData.js'
 import './App.css'
 
 const SECTIONS = {
