@@ -143,7 +143,7 @@ function App() {
   const handleDepartShipment = async (shipmentId) => { try { const updated = fromApiShipment(await api.depart(shipmentId)); setShipments(prev => prev.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message) } }
 
   const handleConfirmDelivery = async (shipmentId) => {
-    try { const updated = fromApiShipment(await api.complete(shipmentId)); setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message) }
+    try { const updated = fromApiShipment(await api.complete(shipmentId)); setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message); throw error }
   }
 
   // Archiving retains every part of the record; nothing is deleted.
