@@ -7,6 +7,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <time.h>
 
 const char* WIFI_SSID = "YOUR_WIFI";
 const char* WIFI_PASSWORD = "YOUR_PASSWORD";
@@ -97,7 +98,10 @@ void sendReading() {
   doc["doorOpen"] = doorOpen;
   // Use backend/server current time for the demo; ESP32 clock should be NTP
   // configured before sending actual readings.
-  doc["recordedAt"] = "2026-11-19T00:00:00.000Z";
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) {
+    char iso[32]; strftime(iso, sizeof(iso), "%Y-%m-%dT%H:%M:%S.000Z", &timeinfo); doc["recordedAt"] = iso;
+  } else { doc["recordedAt"] = "2026-11-19T00:00:00.000Z"; }
   postJson(String("/devices/") + DEVICE_ID + "/readings", doc);
 }
 
