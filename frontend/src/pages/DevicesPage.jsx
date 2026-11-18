@@ -78,7 +78,7 @@ function DevicesPage({ devices, shipments, onOpenShipment }) {
       <div className="page-head">
         <div className="page-head__text">
           <div className="page-head__eyebrow">
-            <span className="mock-chip">Demo data</span>
+            <span className="mock-chip">Backend registry</span>
             Fleet operations
           </div>
           <h1 className="page-head__title">Device fleet</h1>
@@ -149,9 +149,7 @@ function DevicesPage({ devices, shipments, onOpenShipment }) {
       />
 
       <p className="devices-page__demo-note">
-        Fleet, hardware, connectivity and sensor evidence are simulated demo
-        data for this prototype. No device is actually connected and no
-        assignment is changed from this page.
+        Fleet records are loaded from the backend device registry. Hardware connectivity and sensor health only reflect backend-reported evidence; physical devices are not verified unless they report.
       </p>
     </div>
   )
