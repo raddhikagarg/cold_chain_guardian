@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { id: 'devices', label: 'Devices', icon: <CpuIcon size={18} /> },
 ]
 
-function Sidebar({ activeSection, onNavigate, alertCount }) {
+function Sidebar({ activeSection, onNavigate, alertCount, backendStatus = 'connecting', backendMessage = '' }) {
   return (
     <aside className="sidebar">
       <div className="sidebar__brand">
@@ -46,8 +46,8 @@ function Sidebar({ activeSection, onNavigate, alertCount }) {
       </nav>
 
       <div className="sidebar__footer">
-        <div className="sidebar__footer-label">Mock data mode</div>
-        <div className="sidebar__footer-value">Backend pending</div>
+        <div className="sidebar__footer-label">Backend status</div>
+        <div className={`sidebar__footer-value sidebar__footer-value--${backendStatus}`} title={backendMessage}>{backendStatus === 'connected' ? 'Connected' : backendStatus === 'error' ? 'Connection error' : 'Connecting…'}</div>
       </div>
     </aside>
   )
