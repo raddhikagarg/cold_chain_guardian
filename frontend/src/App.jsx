@@ -100,6 +100,7 @@ function App() {
   const [devices, setDevices] = useState([])
   const [apiError, setApiError] = useState('')
   const [apiReady, setApiReady] = useState(false)
+  const [demoTelemetryEnabled, setDemoTelemetryEnabled] = useState(false)
   const [selectedShipmentId, setSelectedShipmentId] = useState('')
   const [series, setSeries] = useState(TEMPERATURE_SERIES)
   const [humidity, setHumidity] = useState(HUMIDITY)
@@ -164,7 +165,7 @@ function App() {
 
   // Demo telemetry is deliberately labeled simulated; it uses the same backend ingestion endpoint as the ESP32.
   useEffect(() => {
-    if (!apiReady) return
+    if (!apiReady || !demoTelemetryEnabled) return
     const interval = setInterval(() => {
       const active = shipments.find(s => s.lifecycleStatus === 'in-transit' && s.deviceId)
       if (active) api.readings(active.deviceId, { shipmentId: active.id, recordedAt: new Date().toISOString(), temperature: Number((3.5 + Math.random() * 2).toFixed(1)), humidity: Math.round(60 + Math.random() * 8), shock: Number((Math.random() * 0.4).toFixed(2)), light: Math.round(Math.random() * 20), ethylene: Number((Math.random() * 0.8).toFixed(2)), doorOpen: false }).then(() => api.shipment(active.id)).then(async raw => { raw.readings = await api.shipmentReadings(active.id).catch(() => []); const fresh = fromApiShipment(raw); setShipments(prev => prev.map(s => s.id === active.id ? fresh : s)); setSeries(prev => [...prev.slice(1), fresh.latestReading?.temperature ?? prev[prev.length - 1]]); setHumidity(fresh.latestReading?.humidity ?? humidity); api.devices().then(rows => setDevices(rows.map(fromApiDevice))).catch(() => {}) }).catch(error => setApiError('Demo telemetry: ' + error.message))
@@ -172,7 +173,7 @@ function App() {
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [apiReady, shipments])
+  }, [apiReady, demoTelemetryEnabled, shipments])
 
 
   const currentTemp = series[series.length - 1]
@@ -230,6 +231,12 @@ function App() {
         <main className="app__content">
           {apiError && <div className="notice notice--error" role="alert">Backend: {apiError}</div>}
           {!apiReady && <div className="notice notice--info">Connecting to backend APIs…</div>}
+          <div className="notice notice--info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span>Telemetry mode: <strong>{demoTelemetryEnabled ? 'SIMULATION ON' : 'SIMULATION OFF'}</strong> — generated samples are not physical sensor data.</span>
+            <button type="button" onClick={() => setDemoTelemetryEnabled(value => !value)} disabled={!apiReady}>
+              {demoTelemetryEnabled ? 'Stop simulation' : 'Start simulation'}
+            </button>
+          </div>
           {activeSection === 'overview' && (
             <>
               <ShipmentSelector
