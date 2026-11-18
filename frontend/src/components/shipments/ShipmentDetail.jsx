@@ -131,12 +131,14 @@ function ShipmentDetail({
       return { sensorId, available: false, enabled: false, configured: false, value: null }
     }
     const series = getMockSensorSeries(shipment, sensorId)
+    const latest = shipment.latestReading
+    const realField = sensorId === 'door' ? 'doorOpen' : sensorId
     return {
       sensorId,
       available: true,
       enabled: config.enabled,
       configured: isMonitoringConfigured(config),
-      value: series[series.length - 1].value,
+      value: latest && latest[realField] != null ? latest[realField] : series[series.length - 1].value,
     }
   })
 
@@ -438,8 +440,7 @@ function ShipmentDetail({
           </div>
 
           <p className="panel__footnote">
-            Values are generated mock telemetry around the configured warning
-            range; they are not real sensor measurements yet.
+            Latest persisted backend reading is shown when available; fallback tiles are demo-only.
           </p>
         </section>
       </div>
