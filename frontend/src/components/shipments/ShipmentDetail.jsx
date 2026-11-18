@@ -346,22 +346,10 @@ function ShipmentDetail({
 
           <div className="detail-progress">
             <div className="detail-progress__labels">
-              <span>Route progress</span>
-              <span>{progress}%</span>
+              <span>Location tracking</span>
+              <span>GPS not connected</span>
             </div>
-            <div
-              className="detail-progress__track"
-              role="progressbar"
-              aria-valuenow={progress}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Shipment route progress"
-            >
-              <span
-                className="detail-progress__fill"
-                style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-              />
-            </div>
+            <p className="sensor-panel__note">Origin and destination are shipment metadata. Live route progress requires a GPS/location device and is not measured by the current ESP32 telemetry.</p>
           </div>
         </section>
       </div>
@@ -413,7 +401,7 @@ function ShipmentDetail({
           <header className="panel__head">
             <div>
               <h2 className="panel__title">Current monitoring</h2>
-              <p className="panel__subtitle">Latest demonstration readings</p>
+              <p className="panel__subtitle">Backend readings when available; simulated fallback is labeled</p>
             </div>
           </header>
 
