@@ -102,8 +102,8 @@ function App() {
   const [apiReady, setApiReady] = useState(false)
   const [demoTelemetryEnabled, setDemoTelemetryEnabled] = useState(false)
   const [selectedShipmentId, setSelectedShipmentId] = useState('')
-  const [series, setSeries] = useState(TEMPERATURE_SERIES)
-  const [humidity, setHumidity] = useState(HUMIDITY)
+  const [series, setSeries] = useState([])
+  const [humidity, setHumidity] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(() => formatClock(new Date()))
   const [shipmentFocusId, setShipmentFocusId] = useState(null)
 
@@ -176,13 +176,11 @@ function App() {
   }, [apiReady, demoTelemetryEnabled, shipments])
 
 
-  const currentTemp = series[series.length - 1]
-  const criticalAlerts = RECENT_EVENTS.filter((event) => event.severity === 'critical').length
-  const warningAlerts = RECENT_EVENTS.filter((event) => event.severity === 'warning').length
-  const activeAlerts = criticalAlerts + warningAlerts
-
-  // Sidebar badge follows the real alert queue (active + acknowledged).
+  // Alert counters are calculated from backend shipment alert records only.
   const alertQueue = summarizeAlerts(getAllAlerts(shipments))
+  const criticalAlerts = alertQueue.critical
+  const warningAlerts = alertQueue.warning
+  const activeAlerts = alertQueue.active
 
   // The Overview only works with operational shipments. Drafts and
   // completed/archived records are excluded from the selector and analytics.
@@ -193,6 +191,9 @@ function App() {
     ) ??
     operationalShipments[0] ??
     null
+  const latestReading = selectedShipment?.latestReading ?? selectedShipment?.readings?.at(-1) ?? null
+  const currentTemp = latestReading?.temperature ?? series[series.length - 1] ?? null
+  const currentHumidity = latestReading?.humidity ?? humidity
 
   const selectedDevice = selectedShipment?.deviceId
     ? (devices.find((device) => device.id === selectedShipment.deviceId) ?? null)
@@ -204,9 +205,8 @@ function App() {
     getDeviceRegistry(devices, shipments),
   )
 
-  const tempHealthy = currentTemp >= SAFE_TEMP_RANGE.min && currentTemp <= SAFE_TEMP_RANGE.max
-  const tempNearLimit =
-    currentTemp > SAFE_TEMP_RANGE.max - 0.5 || currentTemp < SAFE_TEMP_RANGE.min + 0.5
+  const tempHealthy = currentTemp != null && currentTemp >= SAFE_TEMP_RANGE.min && currentTemp <= SAFE_TEMP_RANGE.max
+  const tempNearLimit = currentTemp != null && (currentTemp > SAFE_TEMP_RANGE.max - 0.5 || currentTemp < SAFE_TEMP_RANGE.min + 0.5)
 
   const section = SECTIONS[activeSection]
 
@@ -248,7 +248,7 @@ function App() {
               <section className="metrics" aria-label="Key metrics">
                 <MetricCard
                   label="Current Temperature"
-                  value={currentTemp.toFixed(1)}
+                  value={currentTemp == null ? '—' : currentTemp.toFixed(1)}
                   unit="°C"
                   icon={<ThermometerIcon size={18} />}
                   tone={!tempHealthy ? 'critical' : tempNearLimit ? 'warn' : 'ok'}
@@ -257,7 +257,7 @@ function App() {
                 />
                 <MetricCard
                   label="Humidity"
-                  value={humidity}
+                  value={currentHumidity ?? '—'}
                   unit="% RH"
                   icon={<DropletIcon size={18} />}
                   tone="ok"
@@ -274,11 +274,11 @@ function App() {
                 />
                 <MetricCard
                   label="Shipment Status"
-                  value="In Transit"
+                  value={selectedShipment?.status ?? 'No shipment'}
                   icon={<TruckIcon size={18} />}
                   tone="info"
                   status="On schedule"
-                  hint={`${CURRENT_SHIPMENT.id} · ${CURRENT_SHIPMENT.progress}% complete`}
+                  hint={selectedShipment ? `${selectedShipment.id} · route progress not GPS verified` : 'Select or create an operational shipment'}
                 />
               </section>
 
