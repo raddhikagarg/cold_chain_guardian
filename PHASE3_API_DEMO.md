@@ -1,65 +1,64 @@
-# Phase 3: real API integration + demo telemetry
+# Cold Chain Guardian — Demo & Setup
 
-## Local run (backend + frontend)
+## Local run
 
 1. Copy `backend/.env.example` to `backend/.env` and set `MONGODB_URI`.
-2. In terminal 1:
+2. Terminal 1:
    ```bash
    cd backend
    npm install
    npm run dev
    ```
-   API: `http://localhost:5000/api`
-3. In terminal 2:
+   Backend API: `http://localhost:5000/api`
+3. Terminal 2:
    ```bash
    cd frontend
    npm install
    npm run dev
    ```
-   Vite proxies `/api` to localhost:5000. For a deployed API, set `VITE_API_BASE_URL` in frontend env.
+   Open the Vite URL shown in the terminal. During development, Vite proxies `/api` to `http://localhost:5000`. For a hosted API, configure `VITE_API_BASE_URL`.
 
-## Fast device registration for a dashboard-only test
+## Demo telemetry (opt-in)
 
-Before using the frontend, create a test device and mark it online with:
+The dashboard's **Start simulation** control enables generated telemetry for an assigned, in-transit shipment. Simulation is **off by default**. Simulated values are posted to the same backend reading-ingestion API as device readings, stored in MongoDB, evaluated against shipment thresholds, and then fetched back for analytics.
+
+Generated readings are not physical sensor measurements. The shipment detail tiles show persisted readings only; Sensor Analytics explicitly labels its demo fallback.
+
+## Register a test device
+
+If no ESP32 has registered, you can create a local demo device once (the ID must be unique):
+
 ```bash
-curl -X POST http://localhost:5000/api/devices -H "Content-Type: application/json" -d '{"deviceId":"ESP32-01","name":"Demo ESP32","status":"offline","connectivity":"Wi-Fi","firmware":"demo","sensors":["temperature","humidity","shock","light","door","ethylene"]}'
-curl -X POST http://localhost:5000/api/devices/ESP32-01/heartbeat -H "Content-Type: application/json" -d '{"battery":100,"signal":"Strong","signalDbm":-45,"firmware":"demo","connectivity":"Wi-Fi"}'
+curl -X POST http://localhost:5000/api/devices \
+  -H "Content-Type: application/json" \
+  -d '{"deviceId":"ESP32-01","name":"Demo ESP32","status":"offline","connectivity":"Wi-Fi","firmware":"demo","sensors":["temperature","humidity","shock","light","door","ethylene"]}'
 ```
-If you have already registered `ESP32-01`, skip the first command and just send heartbeat.
 
-## ESP32 device onboarding
+Then send a heartbeat:
 
-Register each ESP32 once:
-```http
-POST /api/devices
-Content-Type: application/json
+```bash
+curl -X POST http://localhost:5000/api/devices/ESP32-01/heartbeat \
+  -H "Content-Type: application/json" \
+  -d '{"battery":100,"signal":"Strong","signalDbm":-45,"firmware":"demo","connectivity":"Wi-Fi"}'
 ```
-```json
-{
-  "deviceId": "ESP32-01",
-  "name": "Cold Chain Logger 01",
-  "status": "offline",
-  "connectivity": "Wi-Fi",
-  "firmware": "0.1.0",
-  "sensors": ["temperature", "humidity", "shock", "light", "door", "ethylene"]
-}
-```
-The firmware starter in `hardware/esp32/ColdChainGuardian.ino` demonstrates registration, heartbeat and readings. Configure Wi-Fi/API host, then replace `readSensorValues()` with the actual sensor-library reads and pin mappings. Board GPIO assignments are intentionally not guessed.
 
-## Demo/test telemetry
+If the device already exists, skip registration and send the heartbeat.
 
-When a shipment is `in-transit` and has a device assigned, the frontend demo timer sends generated readings every 5 seconds to the same endpoint used by the ESP32:
-```http
-POST /api/devices/:deviceId/readings
-```
-These values are **simulated**, but they are persisted by MongoDB and passed through the real backend reading validation and cargo alert evaluation. Latest persisted readings are fetched back and shown on shipment detail. Disable/remove the demo timer before claiming a hardware run.
+## Shipment demo flow
 
-## End-to-end smoke test
+1. Register a device and ensure it is online.
+2. Create a shipment with cargo, origin/destination, monitoring limits, and an available device.
+3. Schedule the shipment and mark it in transit.
+4. On the Overview, enable **Start simulation** to send backend-validated samples.
+5. View the latest stored samples and charts; temporarily lower the temperature warning threshold if you want to demonstrate alert generation.
+6. Acknowledge/resolve alerts from the Alerts page. The UI waits for the API operation and reports failures.
 
-- Register a device; verify it appears in Devices.
-- Assign it to a shipment, schedule it, then mark it In Transit (set the shipment's scheduled departure to now/past before departure).
-- Watch for 5-second simulated telemetry in MongoDB and Shipment detail.
-- Temporarily set a low temperature threshold, let a demo reading exceed it, and verify an alert appears.
-- When hardware is available, turn off demo telemetry and send real sensor values with an NTP timestamp.
+## ESP32 sketch
 
-The API implementation is committed on branch `phase-3-shipment-device-apis`. It has not been executed against a live MongoDB instance or built locally in this environment, so run the smoke test before presenting.
+`hardware/esp32/ColdChainGuardian.ino` is an integration starter. Configure Wi-Fi and API host. It currently uses simulated values. Before using actual hardware, implement and verify the sensor drivers and GPIO pin mappings in `readSensorValues()`. Do not claim physical sensor telemetry or GPS tracking unless the board and sensor readings have been tested.
+
+## Current limitations
+
+- No GPS/location hardware or live route-progress pipeline is included; route progress is not presented as measured.
+- Firmware sensor drivers and board pin mapping are not yet verified.
+- CI workflow runs the frontend production build and backend unit tests. Live MongoDB integration tests and hardware tests require a configured environment and are not run here.
