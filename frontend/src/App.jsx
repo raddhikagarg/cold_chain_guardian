@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { api, fromApiShipment, fromApiDevice } from './utils/api.js'
 import Sidebar from './components/Sidebar.jsx'
 import TopBar from './components/TopBar.jsx'
 import MetricCard from './components/MetricCard.jsx'
@@ -95,7 +96,10 @@ function getDefaultShipmentId(shipments) {
 
 function App() {
   const [activeSection, setActiveSection] = useState('overview')
-  const [shipments, setShipments] = useState(INITIAL_SHIPMENTS)
+  const [shipments, setShipments] = useState([])
+  const [devices, setDevices] = useState([])
+  const [apiError, setApiError] = useState('')
+  const [apiReady, setApiReady] = useState(false)
   const [selectedShipmentId, setSelectedShipmentId] = useState(() =>
     getDefaultShipmentId(INITIAL_SHIPMENTS),
   )
@@ -103,6 +107,27 @@ function App() {
   const [humidity, setHumidity] = useState(HUMIDITY)
   const [lastUpdated, setLastUpdated] = useState(() => formatClock(new Date()))
   const [shipmentFocusId, setShipmentFocusId] = useState(null)
+
+  useEffect(() => {
+    let alive = true
+    const load = async () => {
+      try {
+        const [shipmentRows, deviceRows] = await Promise.all([api.shipments(), api.devices()])
+        if (!alive) return
+        const normalized = shipmentRows.map(fromApiShipment)
+        setShipments(normalized)
+        setDevices(deviceRows.map(fromApiDevice))
+        setSelectedShipmentId(getDefaultShipmentId(normalized))
+        setApiError('')
+      } catch (error) {
+        if (alive) setApiError(error.message || 'Could not connect to backend. Check API server and MongoDB.')
+      } finally {
+        if (alive) setApiReady(true)
+      }
+    }
+    load()
+    return () => { alive = false }
+  }, [])
 
   // Cross-navigation from Device Details into the assigned shipment.
   const handleOpenShipment = (shipmentId) => {
@@ -174,7 +199,7 @@ function App() {
       })
       setHumidity((previous) => Math.round(clamp(previous + (Math.random() * 3 - 1.5), 58, 66)))
       setLastUpdated(formatClock(new Date()))
-    }, 4000)
+    }, 5000)
 
     return () => clearInterval(interval)
   }, [])
@@ -198,13 +223,13 @@ function App() {
     null
 
   const selectedDevice = selectedShipment?.deviceId
-    ? (DEVICES.find((device) => device.id === selectedShipment.deviceId) ?? null)
+    ? (devices.find((device) => device.id === selectedShipment.deviceId) ?? null)
     : null
 
   // The top bar follows the real fleet registry. Only fresh heartbeats count
   // as connected; stale and offline devices never inflate this number.
   const deviceSummary = summarizeDevices(
-    getDeviceRegistry(DEVICES, shipments),
+    getDeviceRegistry(devices, shipments),
   )
 
   const tempHealthy = currentTemp >= SAFE_TEMP_RANGE.min && currentTemp <= SAFE_TEMP_RANGE.max
@@ -231,7 +256,7 @@ function App() {
           lastUpdated={lastUpdated}
         />
 
-        <main className="app__content">
+        <main className="app__content">\n          {apiError && <div className="notice notice--error" role="alert">Backend: {apiError}</div>}\n          {!apiReady && <div className="notice notice--info">Connecting to backend APIs…</div>}
           {activeSection === 'overview' && (
             <>
               <ShipmentSelector
@@ -308,7 +333,7 @@ function App() {
           {activeSection === 'shipments' && (
             <ShipmentsPage
               shipments={shipments}
-              devices={DEVICES}
+              devices={devices}
               onCreateShipment={handleCreateShipment}
               onConfirmDelivery={handleConfirmDelivery}
               initialShipmentId={shipmentFocusId}
