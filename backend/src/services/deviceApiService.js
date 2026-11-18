@@ -1,6 +1,4 @@
-const { Device, Shipment } = require('../models')
 const { SENSOR_IDS, SENSOR_CATALOG } = require('../constants/sensors')
-const { OPERATIONAL_SHIPMENT_STATUSES } = require('../constants/enums')
 const { findDeviceDocument } = require('./deviceAvailability')
 const { getDeviceConnectionState } = require('../utils/deviceState')
 const { presentDevice, findAssignedShipment } = require('./devicePresenter')
