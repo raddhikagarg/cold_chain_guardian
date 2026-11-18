@@ -14,6 +14,7 @@ function ShipmentsPage({
   devices,
   onCreateShipment,
   onConfirmDelivery,
+  onDepartShipment,
   initialShipmentId = null,
   onInitialShipmentConsumed,
 }) {
@@ -74,6 +75,7 @@ function ShipmentsPage({
         notice={notice}
         onDismissNotice={() => setNotice('')}
         onConfirmDelivery={handleConfirmDelivery}
+        onDepartShipment={onDepartShipment}
         onBack={() => {
           setView('list')
           setNotice('')
