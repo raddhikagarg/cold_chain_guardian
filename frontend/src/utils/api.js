@@ -12,10 +12,11 @@ async function request(path, options = {}) {
 
 export const api = {
   shipment: (id) => request(`/shipments/${encodeURIComponent(id)}`),
+  shipmentReadings: async (id) => { const result = await request(`/shipments/${encodeURIComponent(id)}/readings?limit=500&sort=recordedAt:asc`); return result.data ?? result },
   shipments: async () => {
     const list = await request('/shipments?limit=100&status=all')
     const rows = list.data ?? list
-    return Promise.all(rows.map(async (row) => request(`/shipments/${encodeURIComponent(row.shipmentId || row.id)}`)))
+    return Promise.all(rows.map(async (row) => { const detail = await request(`/shipments/${encodeURIComponent(row.shipmentId || row.id)}`); detail.readings = await api.shipmentReadings(detail.shipmentId || detail.id).catch(() => []); return detail }))
   },
   createShipment: (payload) => request('/shipments', { method: 'POST', body: JSON.stringify(payload) }),
   updateShipment: (id, payload) => request(`/shipments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(payload) }),
