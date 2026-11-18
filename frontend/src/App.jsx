@@ -135,7 +135,7 @@ function App() {
   }
 
   const handleCreateShipment = async (shipment) => {
-    try { const response = await api.createShipment({ shipmentId: shipment.id, status: shipment.status, cargo: shipment.cargo, route: shipment.route, monitoring: shipment.monitoring, systemAlerts: shipment.systemAlerts, deviceId: shipment.deviceId }); const normalized = fromApiShipment(response); setShipments(previous => previous.some(item => item.id === normalized.id) ? previous : [normalized, ...previous]); setApiError('') } catch (error) { setApiError(error.message) }
+    try { const response = await api.createShipment({ shipmentId: shipment.id, status: shipment.status, cargo: shipment.cargo, route: shipment.route, monitoring: shipment.monitoring, systemAlerts: shipment.systemAlerts, deviceId: shipment.deviceId }); const normalized = fromApiShipment(response); setShipments(previous => previous.some(item => item.id === normalized.id) ? previous : [normalized, ...previous]); setApiError('') } catch (error) { setApiError(error.message); throw error }
   }
 
   // Delivery is only recorded through an explicit operator action here.
