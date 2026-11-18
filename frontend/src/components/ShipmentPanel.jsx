@@ -44,7 +44,6 @@ function ShipmentPanel({ shipment, device }) {
   const departureTime = formatTime(route.departure)
   const arrivalTime = formatTime(route.arrival)
   const hasDeparted = DEPARTED_STATUSES.includes(shipment.status)
-  const progress = Math.min(100, Math.max(0, route.progress ?? 0))
 
   const temperatureConfig = monitoring?.temperature
   const temperatureBand = !temperatureConfig
@@ -134,23 +133,8 @@ function ShipmentPanel({ shipment, device }) {
             </div>
           </div>
 
-          <div
-            className="shipment__track"
-            role="progressbar"
-            aria-valuenow={progress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Shipment route progress"
-          >
-            <div className="shipment__track-fill" style={{ width: `${progress}%` }}>
-              <span className="shipment__truck" aria-hidden="true">
-                <TruckIcon size={15} />
-              </span>
-            </div>
-          </div>
-
           <span className="shipment__progress-label">
-            {progress}% of route complete
+            GPS route progress unavailable — this device is not reporting location coordinates.
           </span>
         </div>
       </div>
