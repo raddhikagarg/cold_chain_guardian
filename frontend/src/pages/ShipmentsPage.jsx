@@ -52,11 +52,13 @@ function ShipmentsPage({
     }
   }
 
-  const handleConfirmDelivery = (shipmentId) => {
-    onConfirmDelivery?.(shipmentId)
-    setNotice(
-      `${shipmentId} delivery confirmed and moved to shipment history. Existing alerts were not resolved automatically.`,
-    )
+  const handleConfirmDelivery = async (shipmentId) => {
+    try {
+      await onConfirmDelivery?.(shipmentId)
+      setNotice(`${shipmentId} delivery updated successfully. Existing alerts were not resolved automatically.`)
+    } catch (error) {
+      setNotice(`Delivery update failed: ${error.message}`)
+    }
   }
 
   if (view === 'add') {
