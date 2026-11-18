@@ -41,13 +41,13 @@ void registerDevice() {
   doc["name"] = DEVICE_NAME;
   doc["firmware"] = FIRMWARE;
   doc["connectivity"] = "Wi-Fi";
-  doc["sensors"] = JsonArray();
-  doc["sensors"].add("temperature");
-  doc["sensors"].add("humidity");
-  doc["sensors"].add("shock");
-  doc["sensors"].add("light");
-  doc["sensors"].add("door");
-  doc["sensors"].add("ethylene");
+  JsonArray sensors = doc.createNestedArray("sensors");
+  sensors.add("temperature");
+  sensors.add("humidity");
+  sensors.add("shock");
+  sensors.add("light");
+  sensors.add("door");
+  sensors.add("ethylene");
   doc["status"] = "offline";
   registered = postJson("/devices", doc);
   if (!registered) {
@@ -96,12 +96,10 @@ void sendReading() {
   doc["light"] = light;
   doc["ethylene"] = ethylene;
   doc["doorOpen"] = doorOpen;
-  // Use backend/server current time for the demo; ESP32 clock should be NTP
-  // configured before sending actual readings.
+  // Require synchronized NTP time so backend freshness checks are meaningful.
   struct tm timeinfo;
-  if (getLocalTime(&timeinfo)) {
-    char iso[32]; strftime(iso, sizeof(iso), "%Y-%m-%dT%H:%M:%S.000Z", &timeinfo); doc["recordedAt"] = iso;
-  } else { doc["recordedAt"] = "2026-11-19T00:00:00.000Z"; }
+  if (!getLocalTime(&timeinfo)) { Serial.println("Clock not synced; skip sample."); return; }
+  char iso[32]; strftime(iso, sizeof(iso), "%Y-%m-%dT%H:%M:%S.000Z", &timeinfo); doc["recordedAt"] = iso;
   postJson(String("/devices/") + DEVICE_ID + "/readings", doc);
 }
 
@@ -112,6 +110,8 @@ void setup() {
   Serial.print("Wi-Fi connecting");
   while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
   Serial.println("\nWi-Fi connected");
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  for (int attempt = 0; attempt < 20; attempt++) { struct tm t; if (getLocalTime(&t)) break; delay(500); }
   registerDevice();
 }
 
