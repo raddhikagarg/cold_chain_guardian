@@ -63,6 +63,8 @@ function ShipmentsPage({
 
   if (view === 'add') {
     return (
+      <>
+        {notice && <div className={`notice ${notice.startsWith('Shipment was not saved') ? 'notice--error' : 'notice--success'}`} role="status">{notice}</div>}
       <ShipmentForm
         shipments={shipments}
         devices={devices}
@@ -70,6 +72,7 @@ function ShipmentsPage({
         onCreate={(shipment) => handleSaved(shipment, false)}
         onCancel={() => setView('list')}
       />
+      </>
     )
   }
 
