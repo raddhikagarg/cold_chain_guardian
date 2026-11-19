@@ -155,6 +155,49 @@ function App() {
     try { const updated = fromApiShipment(await api.complete(shipmentId)); setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message); throw error }
   }
 
+  // Send controlled temperatures through the same ingestion API used by the ESP32.
+  // Stop the random simulator first so it cannot interleave test readings.
+  const handleTemperatureThresholdTest = async () => {
+    if (demoTelemetryEnabled) {
+      setApiError('Stop the random simulation before running the controlled temperature test.')
+      return
+    }
+    const target = shipments.find(s => s.id === selectedShipmentId && s.lifecycleStatus === 'in-transit' && s.deviceId)
+    if (!target) {
+      setApiError('Select an in-transit shipment with an assigned device before running this test.')
+      return
+    }
+    try {
+      const samples = [
+        { temperature: 9, label: 'warning test (9°C)' },
+        { temperature: 11, label: 'critical test (11°C)' },
+        { temperature: 5.5, label: 'recovery test (5.5°C)' },
+      ]
+      for (const sample of samples) {
+        await api.readings(target.deviceId, {
+          shipmentId: target.id,
+          recordedAt: new Date().toISOString(),
+          temperature: sample.temperature,
+          humidity: 65,
+          shock: 0.1,
+          light: 10,
+          ethylene: 0.4,
+          doorOpen: false,
+        })
+        await new Promise(resolve => setTimeout(resolve, 1100))
+      }
+      const raw = await api.shipment(target.id)
+      raw.readings = await api.shipmentReadings(target.id).catch(() => [])
+      const fresh = fromApiShipment(raw)
+      setShipments(prev => prev.map(s => s.id === target.id ? fresh : s))
+      const deviceRows = await api.devices()
+      setDevices(deviceRows.map(fromApiDevice))
+      setApiError('')
+    } catch (error) {
+      setApiError('Temperature threshold test failed: ' + error.message)
+    }
+  }
+
   // Archiving retains every part of the record; nothing is deleted.
   const handleArchiveShipment = async (shipmentId) => {
     try { const updated = fromApiShipment(await api.archive(shipmentId)); setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message) }
@@ -242,11 +285,16 @@ function App() {
         <main className="app__content">
           {apiError && <div className="notice notice--error" role="alert">Backend: {apiError}</div>}
           {!apiReady && <div className="notice notice--info">Connecting to backend APIs…</div>}
-          <div className="notice notice--info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div className="notice notice--info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <span>Telemetry mode: <strong>{demoTelemetryEnabled ? 'SIMULATION ON' : 'SIMULATION OFF'}</strong> — generated samples are not physical sensor data.</span>
-            <button type="button" onClick={() => setDemoTelemetryEnabled(value => !value)} disabled={!apiReady}>
-              {demoTelemetryEnabled ? 'Stop simulation' : 'Start simulation'}
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" onClick={() => setDemoTelemetryEnabled(value => !value)} disabled={!apiReady}>
+                {demoTelemetryEnabled ? 'Stop simulation' : 'Start simulation'}
+              </button>
+              <button type="button" onClick={handleTemperatureThresholdTest} disabled={!apiReady || demoTelemetryEnabled || !selectedShipment?.deviceId || selectedShipment?.lifecycleStatus !== 'in-transit'} title="Posts 9°C, 11°C and 5.5°C through the backend ingestion API">
+                Run temperature threshold test
+              </button>
+            </div>
           </div>
           {activeSection === 'overview' && (
             <>
