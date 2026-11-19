@@ -17,6 +17,7 @@ function ShipmentsPage({
   onDepartShipment,
   onAssignDevice,
   onScheduleShipment,
+  onRescheduleShipment,
   initialShipmentId = null,
   onInitialShipmentConsumed,
 }) {
@@ -63,6 +64,11 @@ function ShipmentsPage({
     }
   }
 
+  const handleRescheduleShipment = async (shipmentId, departure) => {
+    try { await onRescheduleShipment(shipmentId, departure); setNotice(`Planned departure for ${shipmentId} updated.`) }
+    catch (error) { setNotice(`Departure update failed: ${error.message}`); throw error }
+  }
+
   const handleScheduleShipment = async (shipmentId) => {
     try {
       await onScheduleShipment(shipmentId)
@@ -107,6 +113,7 @@ function ShipmentsPage({
         onDepartShipment={onDepartShipment}
         onAssignDevice={handleAssignDevice}
         onScheduleShipment={handleScheduleShipment}
+        onRescheduleShipment={handleRescheduleShipment}
         onBack={() => {
           setView('list')
           setNotice('')
