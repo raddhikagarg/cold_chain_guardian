@@ -22,6 +22,7 @@ import {
   getShipmentMonitoringState,
   getStatusMeta,
   isMonitoringConfigured,
+  getDeviceAvailability,
 } from '../../utils/shipments.js'
 import {
   canConfirmDelivery,
@@ -46,7 +47,7 @@ function InfoRow({ term, children, muted = false }) {
   )
 }
 
-function SensorMatrix({ shipment }) {
+function SensorMatrix({ shipment, device }) {
   return (
     <div className="sensor-matrix">
       <div className="sensor-matrix__head" aria-hidden="true">
@@ -58,7 +59,8 @@ function SensorMatrix({ shipment }) {
         const meta = SENSOR_CATALOG[sensorId]
         const config = shipment.monitoring[sensorId]
         const Icon = SENSOR_ICONS[sensorId]
-        const configured = isMonitoringConfigured(config)
+        const configured = isMonitoringConfigured({ ...config, available: Boolean(device?.sensors?.includes(sensorId)) })
+        const fitted = Boolean(device?.sensors?.includes(sensorId))
 
         return (
           <div className="sensor-matrix__row" key={sensorId}>
@@ -70,8 +72,8 @@ function SensorMatrix({ shipment }) {
               </span>
             </span>
             <span>
-              <StatusBadge tone={config.available ? 'ok' : 'muted'}>
-                {config.available ? 'Available' : 'Not fitted'}
+              <StatusBadge tone={fitted ? 'ok' : 'muted'}>
+                {fitted ? 'Fitted' : 'Not fitted'}
               </StatusBadge>
             </span>
             <span>
@@ -98,8 +100,13 @@ function ShipmentDetail({
   onBack,
   onConfirmDelivery,
   onDepartShipment,
+  onAssignDevice,
+  onScheduleShipment,
 }) {
   const [confirmingDelivery, setConfirmingDelivery] = useState(false)
+  const [deviceChoice, setDeviceChoice] = useState(shipment.deviceId ?? '')
+  const [savingDevice, setSavingDevice] = useState(false)
+  const [scheduling, setScheduling] = useState(false)
 
   const category =
     CARGO_CATEGORIES.find((item) => item.id === shipment.cargo.category)?.label ??
@@ -107,6 +114,7 @@ function ShipmentDetail({
   const status = getStatusMeta(shipment.status)
   const monitoringState = getShipmentMonitoringState(shipment)
   const device = devices.find((item) => item.id === shipment.deviceId) ?? null
+  const deviceOptions = getDeviceAvailability(devices, [shipment]).filter((item) => item.available || item.id === shipment.deviceId)
   const deviceConnectionState = device
     ? getDeviceConnectionState(device)
     : null
@@ -127,7 +135,8 @@ function ShipmentDetail({
 
   const readings = SENSOR_IDS.map((sensorId) => {
     const config = shipment.monitoring[sensorId]
-    if (!config?.available) {
+    const fitted = Boolean(device?.sensors?.includes(sensorId))
+    if (!fitted) {
       return { sensorId, available: false, enabled: false, configured: false, value: null }
     }
     const latest = shipment.latestReading
@@ -278,6 +287,27 @@ function ShipmentDetail({
         </section>
       )}
 
+      {shipment.status === 'draft' && (
+        <section className="lifecycle-actions">
+          <div className="lifecycle-actions__text">
+            <strong>Draft shipment</strong>
+            <span>{device ? 'Device assigned. Scheduling also requires at least one enabled sensor with valid cargo thresholds and a valid route schedule.' : 'Assign an available ESP32 before scheduling this shipment.'}</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn--primary"
+            disabled={!device || scheduling || !onScheduleShipment}
+            onClick={async () => {
+              setScheduling(true)
+              try { await onScheduleShipment(shipment.id) }
+              finally { setScheduling(false) }
+            }}
+          >
+            {scheduling ? 'Scheduling…' : 'Schedule shipment'}
+          </button>
+        </section>
+      )}
+
       {shipment.status === 'scheduled' && onDepartShipment && (
         <section className="lifecycle-actions">
           <div className="lifecycle-actions__text">
@@ -368,6 +398,57 @@ function ShipmentDetail({
             )}
           </header>
 
+          {shipment.status === 'draft' && (
+            <div className="device-assignment-controls">
+              <label className="field">
+                <span className="field__label">Assign ESP32 device</span>
+                <select
+                  className="field__input"
+                  value={deviceChoice}
+                  onChange={(event) => setDeviceChoice(event.target.value)}
+                >
+                  <option value="">Select an available device</option>
+                  {deviceOptions.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.id} · {item.name} ({item.connectionState})
+                    </option>
+                  ))}
+                  {device && !deviceOptions.some((item) => item.id === device.id) && (
+                    <option value={device.id}>{device.id} · currently assigned</option>
+                  )}
+                </select>
+              </label>
+              <div className="lifecycle-actions__buttons">
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  disabled={!deviceChoice || savingDevice || deviceChoice === shipment.deviceId}
+                  onClick={async () => {
+                    setSavingDevice(true)
+                    try { await onAssignDevice(shipment.id, deviceChoice) }
+                    finally { setSavingDevice(false) }
+                  }}
+                >
+                  {savingDevice ? 'Saving…' : device ? 'Change device' : 'Assign device'}
+                </button>
+                {device && (
+                  <button
+                    type="button"
+                    className="btn btn--quiet"
+                    disabled={savingDevice}
+                    onClick={async () => {
+                      setSavingDevice(true)
+                      try { await onAssignDevice(shipment.id, '') }
+                      finally { setSavingDevice(false) }
+                    }}
+                  >
+                    Release device
+                  </button>
+                )}
+              </div>
+              <p className="panel__footnote">Only devices with a fresh heartbeat and no active shipment assignment can be newly assigned. The currently assigned device remains selectable.</p>
+            </div>
+          )}
           {device ? (
             <>
               <dl className="info-list device-info">
@@ -382,7 +463,7 @@ function ShipmentDetail({
                 </InfoRow>
                 <InfoRow term="Firmware">{device.firmware}</InfoRow>
               </dl>
-              <SensorMatrix shipment={shipment} />
+              <SensorMatrix shipment={shipment} device={device} />
             </>
           ) : (
             <div className="empty-state">
