@@ -26,6 +26,7 @@ export const api = {
   complete: (id) => request(`/shipments/${encodeURIComponent(id)}/complete`, { method: 'POST', body: JSON.stringify({ completedAt: new Date().toISOString(), source: 'operator' }) }),
   archive: (id) => request(`/shipments/${encodeURIComponent(id)}/archive`, { method: 'POST', body: JSON.stringify({ archivedAt: new Date().toISOString() }) }),
   assignDevice: (id, deviceId) => request(`/shipments/${encodeURIComponent(id)}/assign-device`, { method: 'POST', body: JSON.stringify({ deviceId }) }),
+  releaseDevice: (id) => request(`/shipments/${encodeURIComponent(id)}/release-device`, { method: 'POST', body: JSON.stringify({}) }),
   devices: async () => {
     const result = await request('/devices?limit=100')
     return result.data ?? result
