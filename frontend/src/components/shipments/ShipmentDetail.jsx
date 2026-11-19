@@ -145,7 +145,7 @@ function ShipmentDetail({
       sensorId,
       available: true,
       enabled: config.enabled,
-      configured: isMonitoringConfigured(config),
+      configured: isMonitoringConfigured({ ...config, available: fitted }),
       value: latest && latest[realField] != null ? latest[realField] : null,
     }
   })
@@ -398,7 +398,7 @@ function ShipmentDetail({
             )}
           </header>
 
-          {shipment.status === 'draft' && (
+          {['draft', 'scheduled'].includes(shipment.status) && (
             <div className="device-assignment-controls">
               <label className="field">
                 <span className="field__label">Assign ESP32 device</span>
@@ -446,7 +446,7 @@ function ShipmentDetail({
                   </button>
                 )}
               </div>
-              <p className="panel__footnote">Only devices with a fresh heartbeat and no active shipment assignment can be newly assigned. The currently assigned device remains selectable.</p>
+              <p className="panel__footnote">Only devices with a fresh heartbeat and no other active shipment assignment can be newly assigned. The currently assigned device remains selectable.</p>
             </div>
           )}
           {device ? (
