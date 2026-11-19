@@ -133,7 +133,8 @@ function App() {
   const handleDepartShipment = async (shipmentId) => { try { const updated = fromApiShipment(await api.depart(shipmentId)); setShipments(prev => prev.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message) } }
 
   const handleAssignDevice = async (shipmentId, deviceId) => {
-    const updated = fromApiShipment(await api.assignDevice(shipmentId, deviceId))
+    const response = deviceId ? await api.assignDevice(shipmentId, deviceId) : await api.releaseDevice(shipmentId)
+    const updated = fromApiShipment(response)
     const deviceRows = await api.devices()
     setShipments(prev => prev.map(s => s.id === shipmentId ? updated : s))
     setDevices(deviceRows.map(fromApiDevice))
