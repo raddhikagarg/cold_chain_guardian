@@ -6,7 +6,7 @@ async function request(path, options = {}) {
     ...options,
   })
   const body = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(body?.error?.message || `API request failed (${response.status})`)
+  if (!response.ok) { const error = new Error(body?.error?.message || `Request failed (${response.status})`); error.status = response.status; error.code = body?.error?.code; error.details = body?.error?.details || []; throw error }
   return body.data ?? body
 }
 
