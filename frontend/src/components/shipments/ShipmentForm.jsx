@@ -36,6 +36,10 @@ function toBounds(minValue, maxValue) {
 
 const hasValue = (value) => value !== '' && value != null
 
+// datetime-local values are expressed in the operator's browser timezone.
+// Convert them to ISO timestamps before sending them to the UTC backend.
+const localDateTimeToIso = (value) => value ? new Date(value).toISOString() : null
+
 const NON_NEGATIVE_SENSORS = new Set(['humidity', 'shock', 'light', 'ethylene'])
 
 /**
@@ -360,9 +364,9 @@ function buildShipment(form, status, device) {
       destination: form.destination.trim(),
       carrier: form.carrier.trim(),
       vehicle: form.vehicle,
-      departure: form.departure,
-      arrival: form.arrival,
-      deadline: form.deadline,
+      departure: localDateTimeToIso(form.departure),
+      arrival: localDateTimeToIso(form.arrival),
+      deadline: localDateTimeToIso(form.deadline),
       distanceKm: null,
       progress: 0,
     },
