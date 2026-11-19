@@ -102,12 +102,20 @@ function ShipmentDetail({
   onDepartShipment,
   onAssignDevice,
   onScheduleShipment,
+  onRescheduleShipment,
 }) {
   const [confirmingDelivery, setConfirmingDelivery] = useState(false)
   const [deviceChoice, setDeviceChoice] = useState(shipment.deviceId ?? '')
   const [savingDevice, setSavingDevice] = useState(false)
   const [scheduling, setScheduling] = useState(false)
   const [departing, setDeparting] = useState(false)
+  const [departureInput, setDepartureInput] = useState(() => {
+    if (!shipment.route?.departure) return ''
+    const date = new Date(shipment.route.departure)
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    return local.toISOString().slice(0, 16)
+  })
+  const [rescheduling, setRescheduling] = useState(false)
 
   const category =
     CARGO_CATEGORIES.find((item) => item.id === shipment.cargo.category)?.label ??
@@ -336,6 +344,32 @@ function ShipmentDetail({
           >
             {departing ? 'Starting…' : 'Mark as in transit'}
           </button>
+          {onRescheduleShipment && (
+            <div className="lifecycle-actions__buttons">
+              <label className="field">
+                <span className="field__label">Planned departure (your local time)</span>
+                <input
+                  type="datetime-local"
+                  className="field__input"
+                  value={departureInput}
+                  onChange={(event) => setDepartureInput(event.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn btn--quiet"
+                disabled={!departureInput || rescheduling || !Number.isFinite(new Date(departureInput).getTime())}
+                onClick={async () => {
+                  setRescheduling(true)
+                  try { await onRescheduleShipment(shipment.id, new Date(departureInput).toISOString()) }
+                  catch (error) { /* The page displays the API error in its notice. */ }
+                  finally { setRescheduling(false) }
+                }}
+              >
+                {rescheduling ? 'Saving…' : 'Update departure time'}
+              </button>
+            </div>
+          )}
         </section>
       )}
 
