@@ -142,6 +142,8 @@ function App() {
     return updated
   }
 
+  const handleRescheduleShipment = async (shipmentId, departure) => { const updated = fromApiShipment(await api.updateShipment(shipmentId, { route: { departure } })); setShipments(prev => prev.map(s => s.id === shipmentId ? updated : s)); setApiError(''); return updated }
+
   const handleScheduleShipment = async (shipmentId) => {
     const updated = fromApiShipment(await api.schedule(shipmentId))
     setShipments(prev => prev.map(s => s.id === shipmentId ? updated : s))
@@ -328,6 +330,7 @@ function App() {
               onDepartShipment={handleDepartShipment}
               onAssignDevice={handleAssignDevice}
               onScheduleShipment={handleScheduleShipment}
+              onRescheduleShipment={handleRescheduleShipment}
               initialShipmentId={shipmentFocusId}
               onInitialShipmentConsumed={() => setShipmentFocusId(null)}
             />
