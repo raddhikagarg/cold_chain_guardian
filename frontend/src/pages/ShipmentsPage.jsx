@@ -15,6 +15,8 @@ function ShipmentsPage({
   onCreateShipment,
   onConfirmDelivery,
   onDepartShipment,
+  onAssignDevice,
+  onScheduleShipment,
   initialShipmentId = null,
   onInitialShipmentConsumed,
 }) {
@@ -52,6 +54,24 @@ function ShipmentsPage({
     }
   }
 
+  const handleAssignDevice = async (shipmentId, deviceId) => {
+    try {
+      await onAssignDevice(shipmentId, deviceId)
+      setNotice(`Device ${deviceId} assigned to ${shipmentId}.`)
+    } catch (error) {
+      setNotice(`Device assignment failed: ${error.message}`)
+    }
+  }
+
+  const handleScheduleShipment = async (shipmentId) => {
+    try {
+      await onScheduleShipment(shipmentId)
+      setNotice(`${shipmentId} scheduled successfully.`)
+    } catch (error) {
+      setNotice(`Scheduling failed: ${error.message}`)
+    }
+  }
+
   const handleConfirmDelivery = async (shipmentId) => {
     try {
       await onConfirmDelivery?.(shipmentId)
@@ -85,6 +105,8 @@ function ShipmentsPage({
         onDismissNotice={() => setNotice('')}
         onConfirmDelivery={handleConfirmDelivery}
         onDepartShipment={onDepartShipment}
+        onAssignDevice={handleAssignDevice}
+        onScheduleShipment={handleScheduleShipment}
         onBack={() => {
           setView('list')
           setNotice('')
