@@ -107,6 +107,7 @@ function ShipmentDetail({
   const [deviceChoice, setDeviceChoice] = useState(shipment.deviceId ?? '')
   const [savingDevice, setSavingDevice] = useState(false)
   const [scheduling, setScheduling] = useState(false)
+  const [departing, setDeparting] = useState(false)
 
   const category =
     CARGO_CATEGORIES.find((item) => item.id === shipment.cargo.category)?.label ??
@@ -132,6 +133,8 @@ function ShipmentDetail({
   )
   const incidents = shipment.incidents ?? []
   const progress = shipment.route?.progress ?? 0
+  const plannedDeparture = shipment.route?.departure ? new Date(shipment.route.departure) : null
+  const departureReady = Boolean(plannedDeparture && plannedDeparture.getTime() <= Date.now())
 
   const readings = SENSOR_IDS.map((sensorId) => {
     const config = shipment.monitoring[sensorId]
@@ -312,9 +315,27 @@ function ShipmentDetail({
         <section className="lifecycle-actions">
           <div className="lifecycle-actions__text">
             <strong>Shipment is scheduled</strong>
-            <span>Start the journey to enable live monitoring and sensor evaluation.</span>
+            <span>
+              {departureReady
+                ? 'The planned departure time has arrived. Confirm when the vehicle actually leaves.'
+                : plannedDeparture
+                  ? `Departure is available from ${formatDateTime(shipment.route.departure)}. You can mark it in transit once this time arrives.`
+                  : 'Set a planned departure time before starting the shipment.'}
+            </span>
           </div>
-          <button type="button" className="btn btn--primary" onClick={() => onDepartShipment(shipment.id)}>Mark as in transit</button>
+          <button
+            type="button"
+            className="btn btn--primary"
+            disabled={!departureReady || departing}
+            onClick={async () => {
+              setDeparting(true)
+              try { await onDepartShipment(shipment.id) }
+              catch (error) { /* The page displays the API error in its notice. */ }
+              finally { setDeparting(false) }
+            }}
+          >
+            {departing ? 'Starting…' : 'Mark as in transit'}
+          </button>
         </section>
       )}
 
