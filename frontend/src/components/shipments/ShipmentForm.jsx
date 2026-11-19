@@ -288,7 +288,7 @@ function buildMonitoring(form, device) {
           {
             available,
             enabled: false,
-            expectedState: null,
+            ...(SENSOR_CATALOG[sensorId].kind === 'state' ? { expectedState: null } : {}),
             warning: null,
             critical: null,
             escalationMinutes: null,
