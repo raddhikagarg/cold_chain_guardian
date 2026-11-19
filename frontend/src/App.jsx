@@ -130,7 +130,7 @@ function App() {
 
   // Delivery is only recorded through an explicit operator action here.
   // Alerts keep their existing status — completion never resolves them.
-  const handleDepartShipment = async (shipmentId) => { try { const updated = fromApiShipment(await api.depart(shipmentId)); setShipments(prev => prev.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message) } }
+  const handleDepartShipment = async (shipmentId) => { try { const updated = fromApiShipment(await api.depart(shipmentId)); setShipments(prev => prev.map(s => s.id === shipmentId ? updated : s)); setApiError(''); return updated } catch (error) { setApiError(error.message); throw error } }
 
   const handleAssignDevice = async (shipmentId, deviceId) => {
     const response = deviceId ? await api.assignDevice(shipmentId, deviceId) : await api.releaseDevice(shipmentId)
