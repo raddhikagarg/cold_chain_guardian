@@ -132,6 +132,22 @@ function App() {
   // Alerts keep their existing status — completion never resolves them.
   const handleDepartShipment = async (shipmentId) => { try { const updated = fromApiShipment(await api.depart(shipmentId)); setShipments(prev => prev.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message) } }
 
+  const handleAssignDevice = async (shipmentId, deviceId) => {
+    const updated = fromApiShipment(await api.assignDevice(shipmentId, deviceId))
+    const deviceRows = await api.devices()
+    setShipments(prev => prev.map(s => s.id === shipmentId ? updated : s))
+    setDevices(deviceRows.map(fromApiDevice))
+    setApiError('')
+    return updated
+  }
+
+  const handleScheduleShipment = async (shipmentId) => {
+    const updated = fromApiShipment(await api.schedule(shipmentId))
+    setShipments(prev => prev.map(s => s.id === shipmentId ? updated : s))
+    setApiError('')
+    return updated
+  }
+
   const handleConfirmDelivery = async (shipmentId) => {
     try { const updated = fromApiShipment(await api.complete(shipmentId)); setShipments(previous => previous.map(s => s.id === shipmentId ? updated : s)); setApiError('') } catch (error) { setApiError(error.message); throw error }
   }
@@ -309,6 +325,8 @@ function App() {
               onCreateShipment={handleCreateShipment}
               onConfirmDelivery={handleConfirmDelivery}
               onDepartShipment={handleDepartShipment}
+              onAssignDevice={handleAssignDevice}
+              onScheduleShipment={handleScheduleShipment}
               initialShipmentId={shipmentFocusId}
               onInitialShipmentConsumed={() => setShipmentFocusId(null)}
             />
