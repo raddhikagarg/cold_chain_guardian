@@ -77,7 +77,7 @@ cd backend
 cp .env.example .env
 ```
 
-Set `MONGODB_URI` in `backend/.env` to your MongoDB connection string. The example configuration uses:
+Set `MONGODB_URI` in `backend/.env` to your MongoDB connection string. For Codespaces/demo use, the default localhost URI now automatically starts an ephemeral in-memory MongoDB and seeds a demo shipment. Demo records reset whenever the backend restarts. For persistent data, replace it with a MongoDB Atlas URI. The example configuration uses:
 
 ```env
 PORT=5000
