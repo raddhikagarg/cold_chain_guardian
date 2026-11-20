@@ -39,7 +39,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - name: Install backend dependencies
         working-directory: backend
-        run: npm ci
+        run: npm install
       - name: Run unit and database integration tests
         working-directory: backend
         env:
