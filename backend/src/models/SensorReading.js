@@ -20,6 +20,7 @@ const MEASUREMENT_FIELDS = [
   'light',
   'ethylene',
   'doorOpen',
+  'irDetected',
 ]
 
 function isFiniteNumber(value) {
@@ -83,6 +84,8 @@ const sensorReadingSchema = new Schema(
 
     // true means the cargo door is open.
     doorOpen: { type: Boolean },
+    // CAAV-023 IR proximity/obstacle detection state.
+    irDetected: { type: Boolean },
 
     /*
      * Ingestion flags. These are derived by the reading service, never
