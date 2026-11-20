@@ -153,7 +153,7 @@ void sendReading() {
   const bool irDetected = CAAV023_ACTIVE_LOW ? !irRawHigh : irRawHigh;
   doc["irDetected"] = irDetected;
   hasValue = true;
-  Serial.printf("CAAV-023 IR: %s (OUT=%s)\\n", irDetected ? "DETECTED" : "clear", irRawHigh ? "HIGH" : "LOW");
+  Serial.printf("CAAV-023 IR: %s (OUT=%s)\n", irDetected ? "DETECTED" : "clear", irRawHigh ? "HIGH" : "LOW");
 
   if (!hasValue) {
     Serial.println("No valid supported measurement; not posting.");
