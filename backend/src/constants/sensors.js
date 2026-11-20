@@ -14,6 +14,7 @@ const SENSOR_IDS = Object.freeze([
   'light',
   'door',
   'ethylene',
+  'ir',
 ])
 
 const SENSOR_CATALOG = Object.freeze({
@@ -53,6 +54,14 @@ const SENSOR_CATALOG = Object.freeze({
     id: 'door',
     label: 'Door Status',
     model: 'Reed switch',
+    unit: 'state',
+    kind: 'state',
+    decimals: null,
+  }),
+  ir: Object.freeze({
+    id: 'ir',
+    label: 'IR Detection',
+    model: 'CAAV-023',
     unit: 'state',
     kind: 'state',
     decimals: null,
