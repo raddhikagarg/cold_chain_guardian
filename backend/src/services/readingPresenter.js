@@ -45,6 +45,7 @@ function presentReading(reading, options = {}) {
     light: plain.light ?? null,
     ethylene: plain.ethylene ?? null,
     doorOpen: plain.doorOpen ?? null,
+    irDetected: plain.irDetected ?? null,
     late: Boolean(plain.late),
     lateReason: plain.lateReason ?? null,
     outOfOrder: Boolean(plain.outOfOrder),
@@ -59,6 +60,7 @@ function presentReading(reading, options = {}) {
       light: formatMeasurement(plain.light, 'light'),
       ethylene: formatMeasurement(plain.ethylene, 'ethylene'),
       doorOpen: formatMeasurement(plain.doorOpen, 'door'),
+      irDetected: formatMeasurement(plain.irDetected, 'ir'),
     },
   }
 }
