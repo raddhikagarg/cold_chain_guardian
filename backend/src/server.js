@@ -10,25 +10,33 @@ const {
 const PORT = Number(process.env.PORT) || 5000
 const MONGODB_URI = process.env.MONGODB_URI
 
-// Start the HTTP server first so /api/health stays reachable even when
-// MongoDB is unavailable. The connection state is reported by the route.
-const server = app.listen(PORT, () => {
-  console.log(`[server] Cold-Chain Guardian API listening on http://localhost:${PORT}`)
-})
+let server = null
 
-connectDatabase(MONGODB_URI).then((connected) => {
+async function start() {
+  // Finish database startup (including demo seeding) before exposing the API.
+  // This prevents the frontend's first /api/health request racing the DB boot.
+  const connected = await connectDatabase(MONGODB_URI)
   if (connected) startOfflineSweep()
-})
 
-// Close the HTTP server, stop the sweep and release MongoDB when stopped.
+  server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[server] Cold-Chain Guardian API listening on port ${PORT}`)
+  })
+}
+
 async function shutdown(signal) {
   console.log(`[server] Received ${signal}. Shutting down...`)
   await stopOfflineSweep()
-  server.close(async () => {
-    await disconnectDatabase()
-    process.exit(0)
-  })
+  if (server) {
+    await new Promise((resolve) => server.close(resolve))
+  }
+  await disconnectDatabase()
+  process.exit(0)
 }
 
 process.on('SIGINT', () => shutdown('SIGINT'))
 process.on('SIGTERM', () => shutdown('SIGTERM'))
+
+start().catch((error) => {
+  console.error('[server] Startup failed:', error)
+  process.exit(1)
+})
