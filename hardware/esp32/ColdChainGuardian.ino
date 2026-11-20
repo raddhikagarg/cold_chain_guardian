@@ -2,9 +2,9 @@
  * Cold Chain Guardian - DOIT ESP32 DEVKIT V1
  * Existing wiring preserved:
  * DS18B20 DQ GPIO4; DHT11 DATA GPIO27; MPU6050 SDA GPIO21/SCL GPIO22,
- * AD0 to GND (0x68); MQ135 AO through divider to GPIO34.
+ * AD0 to GND (0x68); CAAV-023 IR OUT to GPIO34.
  *
- * MQ135 raw ADC is printed to Serial only. It is NOT ethylene or ppm.
+ * CAAV-023 is sent as the explicit boolean field irDetected.
  * HTTPS certificate verification is temporarily disabled for first
  * Codespaces connectivity test. Replace with CA validation before production.
  */
@@ -25,13 +25,14 @@
 const char* WIFI_SSID = "YOUR_WIFI_SSID";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 const char* API_BASE = "https://YOUR-CODESPACE-5000.app.github.dev/api";
-const char* DEVICE_ID = "YOUR_REGISTERED_DEVICE_ID";
+const char* DEVICE_ID = "ESP32-COLD-CHAIN-01";
 const char* DEVICE_NAME = "Cold Chain Guardian - ESP32";
-const char* FIRMWARE = "0.2.0";
+const char* FIRMWARE = "0.3.0";
 
 constexpr uint8_t DS18B20_PIN = 4;
 constexpr uint8_t DHT11_PIN = 27;
-constexpr uint8_t MQ135_AO_PIN = 34;
+constexpr uint8_t CAAV023_OUT_PIN = 34;
+constexpr bool CAAV023_ACTIVE_LOW = true; // LM393 IR modules commonly pull OUT LOW on detection
 constexpr uint8_t MPU6050_SDA_PIN = 21;
 constexpr uint8_t MPU6050_SCL_PIN = 22;
 #define DHT_TYPE DHT11
@@ -77,6 +78,7 @@ void registerDevice() {
   sensors.add("temperature");
   sensors.add("humidity");
   sensors.add("shock");
+  sensors.add("ir");
   Serial.println("Attempting device registration. A conflict can mean this device ID already exists.");
   postJson("/devices", doc);
 }
@@ -162,7 +164,7 @@ void sendReading() {
 void setup() {
   Serial.begin(115200);
   delay(500);
-  analogReadResolution(12);
+  pinMode(CAAV023_OUT_PIN, INPUT);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -183,6 +185,8 @@ void setup() {
     delay(300);
   }
 
+  pinMode(CAAV023_OUT_PIN, INPUT);
+  Serial.println("CAAV-023 digital input ready on GPIO34.");
   dht.begin();
   ds18b20.begin();
   dsReady = ds18b20.getDeviceCount() > 0;
@@ -199,6 +203,7 @@ void setup() {
 
   registerDevice();
   sendHeartbeat();
+  lastHeartbeatAt = millis();
 }
 
 void loop() {
