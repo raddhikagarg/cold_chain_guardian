@@ -148,8 +148,12 @@ void sendReading() {
     }
   }
 
-  // MQ135 analogue output is diagnostic only; no false ethylene conversion.
-  Serial.printf("MQ135 raw ADC (0-4095): %d\n", analogRead(MQ135_AO_PIN));
+  // CAAV-023 digital obstacle/proximity state from GPIO34.
+  const bool irRawHigh = digitalRead(CAAV023_OUT_PIN) == HIGH;
+  const bool irDetected = CAAV023_ACTIVE_LOW ? !irRawHigh : irRawHigh;
+  doc["irDetected"] = irDetected;
+  hasValue = true;
+  Serial.printf("CAAV-023 IR: %s (OUT=%s)\\n", irDetected ? "DETECTED" : "clear", irRawHigh ? "HIGH" : "LOW");
 
   if (!hasValue) {
     Serial.println("No valid supported measurement; not posting.");
