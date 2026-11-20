@@ -7,3 +7,6 @@ dist/
 !.env.example
 *.log
 .DS_Store
+
+# Local ESP32 firmware containing personal credentials
+hardware/esp32/ColdChainGuardian.local.ino
