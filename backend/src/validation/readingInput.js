@@ -18,6 +18,7 @@ const MEASUREMENT_FIELDS = [
   'light',
   'ethylene',
   'doorOpen',
+  'irDetected',
 ]
 
 const READING_ALLOWED_KEYS = ['recordedAt', 'shipmentId', ...MEASUREMENT_FIELDS]
@@ -126,6 +127,12 @@ function validateReadingPayload(input) {
       badField('doorOpen', 'doorOpen must be a boolean.')
     }
     measurements.doorOpen = input.doorOpen
+  }
+  if (input.irDetected !== undefined && input.irDetected !== null) {
+    if (typeof input.irDetected !== 'boolean') {
+      badField('irDetected', 'irDetected must be a boolean.')
+    }
+    measurements.irDetected = input.irDetected
   }
 
   if (Object.keys(measurements).length === 0) {
