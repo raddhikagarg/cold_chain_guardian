@@ -56,6 +56,35 @@ async function seedDemoData() {
     })
   }
 
+  // Enable the three sensors fitted to the demo device and provide visible
+  // warning/critical bands. Apply this even when the shipment already exists.
+  shipment.monitoring = {
+    ...(shipment.monitoring?.toObject?.() || shipment.monitoring || {}),
+    temperature: {
+      available: true,
+      enabled: true,
+      warning: { min: 2, max: 8 },
+      critical: { min: 0, max: 10 },
+      escalationMinutes: 0,
+    },
+    humidity: {
+      available: true,
+      enabled: true,
+      warning: { min: 55, max: 70 },
+      critical: { min: 50, max: 80 },
+      escalationMinutes: 0,
+    },
+    shock: {
+      available: true,
+      enabled: true,
+      warning: { min: 0, max: 0.5 },
+      critical: { min: 0, max: 1 },
+      escalationMinutes: 0,
+    },
+  }
+  shipment.markModified('monitoring')
+  await shipment.save()
+
   const count = await SensorReading.countDocuments({ shipment: shipment._id })
   if (count === 0) {
     const now = Date.now()
