@@ -118,6 +118,42 @@ function App() {
     return () => { alive = false }
   }, [])
 
+  // Refresh persisted backend telemetry every five seconds while the Overview is visible.
+  // This works for both ESP32 readings and the demo simulator.
+  useEffect(() => {
+    if (!apiReady || activeSection !== 'overview' || !selectedShipmentId) return
+    let cancelled = false
+    let refreshing = false
+
+    const refreshTelemetry = async () => {
+      if (refreshing) return
+      refreshing = true
+      try {
+        const [raw, readings] = await Promise.all([
+          api.shipment(selectedShipmentId),
+          api.shipmentReadings(selectedShipmentId),
+        ])
+        if (cancelled) return
+        raw.readings = readings
+        const fresh = fromApiShipment(raw)
+        setShipments(previous => previous.map(item => item.id === selectedShipmentId ? fresh : item))
+        setLastUpdated(formatClock(new Date()))
+        setApiError('')
+      } catch (error) {
+        if (!cancelled) setApiError('Telemetry refresh: ' + error.message)
+      } finally {
+        refreshing = false
+      }
+    }
+
+    refreshTelemetry()
+    const interval = setInterval(refreshTelemetry, 5000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [apiReady, activeSection, selectedShipmentId])
+
   // Cross-navigation from Device Details into the assigned shipment.
   const handleOpenShipment = (shipmentId) => {
     setShipmentFocusId(shipmentId)
