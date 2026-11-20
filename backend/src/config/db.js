@@ -1,9 +1,6 @@
 const mongoose = require('mongoose')
+const { MongoMemoryServer } = require('mongodb-memory-server')
 
-/**
- * Human-readable names for Mongoose's connection readyState values.
- * Exposed through the health endpoint so callers can see the real state.
- */
 const CONNECTION_STATES = {
   0: 'disconnected',
   1: 'connected',
@@ -11,44 +8,65 @@ const CONNECTION_STATES = {
   3: 'disconnecting',
 }
 
-/** Return the current MongoDB connection state as a short string. */
+let memoryServer = null
+
 function getDatabaseStatus() {
   return CONNECTION_STATES[mongoose.connection.readyState] || 'unknown'
 }
 
 /**
- * Connect to MongoDB using the URI from the environment.
- *
- * A failure is logged and reported as `false` rather than thrown, because the
- * API is allowed to keep running while the database is unavailable. Future
- * routes can rely on `getDatabaseStatus()` to report the real connection state.
+ * Development/demo behavior:
+ * - A missing URI or an explicit localhost URI uses an ephemeral in-memory
+ *   MongoDB instance. This avoids ECONNREFUSED 127.0.0.1:27017 in Codespaces.
+ * - A configured remote URI (for example MongoDB Atlas) is used as-is.
+ * - If a remote URI fails, do not silently switch databases and lose writes.
  */
 async function connectDatabase(uri) {
-  if (!uri) {
-    console.error(
-      '[database] MONGODB_URI is not set. Starting without a database connection.',
+  const configuredUri = String(uri || '').trim()
+  const isLocalUri =
+    !configuredUri ||
+    /^(mongodb|mongodb\+srv):\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(
+      configuredUri,
     )
-    return false
-  }
 
   try {
-    await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 })
-    console.log('[database] MongoDB connected')
+    let targetUri = configuredUri
+
+    if (isLocalUri) {
+      console.log(
+        '[database] No reachable external MongoDB configured; starting ephemeral in-memory MongoDB for demo mode.',
+      )
+      memoryServer = await MongoMemoryServer.create()
+      targetUri = memoryServer.getUri('cold-chain-guardian')
+    }
+
+    await mongoose.connect(targetUri, { serverSelectionTimeoutMS: 15000 })
+    console.log(
+      memoryServer
+        ? '[database] In-memory MongoDB connected (demo data is temporary and resets on restart).'
+        : '[database] MongoDB connected',
+    )
     return true
   } catch (error) {
     console.error(`[database] MongoDB connection failed: ${error.message}`)
+    if (memoryServer) {
+      await memoryServer.stop().catch(() => {})
+      memoryServer = null
+    }
     return false
   }
 }
 
-/** Close the connection during a graceful shutdown. */
 async function disconnectDatabase() {
   if (mongoose.connection.readyState !== 0) {
     await mongoose.connection.close()
   }
+  if (memoryServer) {
+    await memoryServer.stop()
+    memoryServer = null
+  }
 }
 
-// Keep the logs honest if MongoDB drops after the initial connection.
 mongoose.connection.on('disconnected', () => {
   console.warn('[database] MongoDB disconnected')
 })
