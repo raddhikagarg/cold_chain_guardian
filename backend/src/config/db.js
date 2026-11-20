@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const { MongoMemoryServer } = require('mongodb-memory-server')
+const seedDemoData = require('./demoSeed')
 
 const CONNECTION_STATES = {
   0: 'disconnected',
@@ -16,10 +17,9 @@ function getDatabaseStatus() {
 
 /**
  * Development/demo behavior:
- * - A missing URI or an explicit localhost URI uses an ephemeral in-memory
- *   MongoDB instance. This avoids ECONNREFUSED 127.0.0.1:27017 in Codespaces.
+ * - Missing or localhost MongoDB URIs use an ephemeral in-memory database.
  * - A configured remote URI (for example MongoDB Atlas) is used as-is.
- * - If a remote URI fails, do not silently switch databases and lose writes.
+ * - A failed remote connection never silently switches databases.
  */
 async function connectDatabase(uri) {
   const configuredUri = String(uri || '').trim()
@@ -34,18 +34,23 @@ async function connectDatabase(uri) {
 
     if (isLocalUri) {
       console.log(
-        '[database] No reachable external MongoDB configured; starting ephemeral in-memory MongoDB for demo mode.',
+        '[database] Using ephemeral in-memory MongoDB because no remote database is configured.',
       )
       memoryServer = await MongoMemoryServer.create()
       targetUri = memoryServer.getUri('cold-chain-guardian')
     }
 
     await mongoose.connect(targetUri, { serverSelectionTimeoutMS: 15000 })
-    console.log(
-      memoryServer
-        ? '[database] In-memory MongoDB connected (demo data is temporary and resets on restart).'
-        : '[database] MongoDB connected',
-    )
+
+    if (memoryServer) {
+      console.log(
+        '[database] In-memory MongoDB connected; demo records will reset when the backend restarts.',
+      )
+      await seedDemoData()
+    } else {
+      console.log('[database] MongoDB connected')
+    }
+
     return true
   } catch (error) {
     console.error(`[database] MongoDB connection failed: ${error.message}`)
