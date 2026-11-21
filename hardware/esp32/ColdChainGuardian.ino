@@ -24,9 +24,9 @@
 #include <Adafruit_Sensor.h>
 
 // Fill locally. Do not commit Wi-Fi credentials.
-const char* WIFI_SSID = "YOUR_WIFI_SSID";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-const char* API_BASE = "https://YOUR-CODESPACE-5000.app.github.dev/api";
+const char* WIFI_SSID = "...";
+const char* WIFI_PASSWORD = "...";
+const char* API_BASE = "...";
 const char* DEVICE_ID = "ESP32-COLD-CHAIN-01";
 const char* DEVICE_NAME = "Cold Chain Guardian - ESP32";
 const char* FIRMWARE = "0.3.0";
