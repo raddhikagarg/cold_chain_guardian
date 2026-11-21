@@ -23,9 +23,10 @@ function getDatabaseStatus() {
  */
 async function connectDatabase(uri) {
   const configuredUri = String(uri || '').trim()
+  // Match localhost URIs with or without a database path/trailing slash.
   const isLocalUri =
     !configuredUri ||
-    /^(mongodb|mongodb\+srv):\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(
+    /^(mongodb|mongodb\+srv):\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/|\?|$)/i.test(
       configuredUri,
     )
 
