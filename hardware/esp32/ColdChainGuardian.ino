@@ -1,20 +1,18 @@
-
 /*
- * COLD CHAIN GUARDIAN
- * Board: DOIT ESP32 DEVKIT V1
+ * Cold Chain Guardian - DOIT ESP32 DEVKIT V1
+ * Confirmed wiring:
+ * DS18B20 DATA GPIO4; DHT11 DATA GPIO27;
+ * MPU-compatible accelerometer SDA GPIO21 / SCL GPIO22, address 0x68;
+ * CAAV-023 digital OUT GPIO34.
  *
- * SENSOR CONNECTIONS
- * DS18B20 DATA  -> GPIO 4
- * DHT11 DATA    -> GPIO 27
- * MPU SDA       -> GPIO 21
- * MPU SCL       -> GPIO 22
- * MPU AD0       -> GND (address 0x68)
- * CAAV-023 OUT  -> GPIO 34
+ * Backend endpoints:
+ * POST /api/devices
+ * POST /api/devices/:deviceId/heartbeat
+ * POST /api/devices/:deviceId/readings
  *
- * MPU is read directly through I2C registers.
- * This avoids relying on the MPU6050 chip-ID check,
- * since the tested module returned WHO_AM_I = 0x70.
+ * Keep secrets.h local and excluded by .gitignore.
  */
+
 #include "secrets.h"
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -27,572 +25,325 @@
 #include <DallasTemperature.h>
 #include <Wire.h>
 
-// --------------------------------------------------
-// 1. CONFIGURATION - EDIT THESE VALUES
-// --------------------------------------------------
-
-const char* WIFI_SSID = "YOUR_WIFI_SSID";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-
-// Replace with your currently active Codespaces backend URL.
-const char* API_BASE =
-  "https://YOUR-CODESPACE-5000.app.github.dev/api";
-
 const char* DEVICE_ID = "ESP32-COLD-CHAIN-01";
 const char* DEVICE_NAME = "Cold Chain Guardian - ESP32";
 const char* FIRMWARE = "1.0.0";
 
-// --------------------------------------------------
-// 2. GPIO CONFIGURATION
-// --------------------------------------------------
-
 constexpr uint8_t DS18B20_PIN = 4;
 constexpr uint8_t DHT11_PIN = 27;
-constexpr uint8_t CAAV023_OUT_PIN = 34;
-
+constexpr uint8_t IR_OUT_PIN = 34;
 constexpr uint8_t MPU_SDA_PIN = 21;
 constexpr uint8_t MPU_SCL_PIN = 22;
-
-constexpr uint8_t MPU_ADDR = 0x68;
-
+constexpr uint8_t MPU_ADDRESS = 0x68;
+constexpr bool IR_ACTIVE_LOW = true;
 #define DHT_TYPE DHT11
 
-// Most LM393-based IR modules are active LOW.
-// Change to false only if your own test confirms
-// that detection produces HIGH.
-constexpr bool IR_ACTIVE_LOW = true;
-
-// MPU accelerometer configured for +/-4g.
-constexpr float ACCEL_LSB_PER_G = 8192.0f;
-constexpr float GRAVITY = 9.80665f;
-
-// --------------------------------------------------
-// 3. SENSOR OBJECTS
-// --------------------------------------------------
+// Direct-register access is used because this tested board returned
+// WHO_AM_I = 0x70 while still providing valid changing acceleration data.
+constexpr uint8_t REG_WHO_AM_I = 0x75;
+constexpr uint8_t REG_PWR_MGMT_1 = 0x6B;
+constexpr uint8_t REG_ACCEL_CONFIG = 0x1C;
+constexpr uint8_t REG_ACCEL_XOUT_H = 0x3B;
+constexpr float ACCEL_LSB_PER_G = 8192.0f; // +/-4g
 
 DHT dht(DHT11_PIN, DHT_TYPE);
-
 OneWire oneWire(DS18B20_PIN);
 DallasTemperature ds18b20(&oneWire);
-
 WiFiClientSecure secureClient;
 
 bool dsReady = false;
 bool mpuReady = false;
-
 unsigned long lastSampleAt = 0;
 unsigned long lastHeartbeatAt = 0;
-
 constexpr unsigned long SAMPLE_INTERVAL_MS = 5000;
 constexpr unsigned long HEARTBEAT_INTERVAL_MS = 30000;
 
-// --------------------------------------------------
-// 4. MPU I2C FUNCTIONS
-// --------------------------------------------------
-
-bool writeMPURegister(uint8_t reg, uint8_t value) {
-  Wire.beginTransmission(MPU_ADDR);
+bool writeMpuRegister(uint8_t reg, uint8_t value) {
+  Wire.beginTransmission(MPU_ADDRESS);
   Wire.write(reg);
   Wire.write(value);
-
   return Wire.endTransmission() == 0;
 }
 
-uint8_t readMPURegister(uint8_t reg) {
-  Wire.beginTransmission(MPU_ADDR);
-  Wire.write(reg);
+bool readMpuRegisters(uint8_t startReg, uint8_t* buffer, size_t length) {
+  Wire.beginTransmission(MPU_ADDRESS);
+  Wire.write(startReg);
+  if (Wire.endTransmission(false) != 0) return false;
 
-  if (Wire.endTransmission(false) != 0) {
-    return 0xFF;
-  }
+  const size_t received = Wire.requestFrom((int)MPU_ADDRESS, (int)length, (int)true);
+  if (received != length) return false;
 
-  if (Wire.requestFrom(MPU_ADDR, (uint8_t)1) != 1) {
-    return 0xFF;
-  }
-
-  return Wire.read();
+  for (size_t i = 0; i < length; i++) buffer[i] = Wire.read();
+  return true;
 }
 
-bool initialiseMPU() {
-  uint8_t identity = readMPURegister(0x75);
+int16_t combineBytes(uint8_t highByte, uint8_t lowByte) {
+  return (int16_t)(((uint16_t)highByte << 8) | lowByte);
+}
 
-  Serial.print("MPU WHO_AM_I: 0x");
-  Serial.println(identity, HEX);
-
-  if (identity == 0xFF) {
-    Serial.println("MPU I2C communication failed.");
+bool initialiseMpu() {
+  uint8_t identity = 0;
+  if (!readMpuRegisters(REG_WHO_AM_I, &identity, 1)) {
+    Serial.println("MPU register read failed.");
     return false;
   }
 
-  // Wake up sensor.
-  if (!writeMPURegister(0x6B, 0x00)) {
-    Serial.println("MPU wake-up failed.");
-    return false;
-  }
+  Serial.printf("Accelerometer WHO_AM_I: 0x%02X\n", identity);
 
+  if (!writeMpuRegister(REG_PWR_MGMT_1, 0x00)) return false;
   delay(100);
+  if (!writeMpuRegister(REG_ACCEL_CONFIG, 0x08)) return false;
+  delay(50);
 
-  // Accelerometer range: +/-4g.
-  if (!writeMPURegister(0x1C, 0x08)) {
-    Serial.println("MPU accelerometer configuration failed.");
-    return false;
-  }
-
-  // Gyroscope range: +/-500 degrees/second.
-  writeMPURegister(0x1B, 0x08);
-
-  Serial.println("MPU accelerometer initialised.");
-
+  Serial.println("MPU-compatible accelerometer configured for +/-4g.");
   return true;
 }
 
-bool readMPUAcceleration(
-  float &x,
-  float &y,
-  float &z
-) {
-  Wire.beginTransmission(MPU_ADDR);
-  Wire.write(0x3B);
-
-  if (Wire.endTransmission(false) != 0) {
-    return false;
-  }
-
-  if (Wire.requestFrom(MPU_ADDR, (uint8_t)6) != 6) {
-    return false;
-  }
-
+bool readAcceleration(float& xG, float& yG, float& zG) {
   uint8_t data[6];
+  if (!readMpuRegisters(REG_ACCEL_XOUT_H, data, sizeof(data))) return false;
 
-  for (int i = 0; i < 6; i++) {
-    data[i] = Wire.read();
-  }
+  xG = combineBytes(data[0], data[1]) / ACCEL_LSB_PER_G;
+  yG = combineBytes(data[2], data[3]) / ACCEL_LSB_PER_G;
+  zG = combineBytes(data[4], data[5]) / ACCEL_LSB_PER_G;
 
-  int16_t rawX = (int16_t)((data[0] << 8) | data[1]);
-  int16_t rawY = (int16_t)((data[2] << 8) | data[3]);
-  int16_t rawZ = (int16_t)((data[4] << 8) | data[5]);
-
-  x = (float)rawX / ACCEL_LSB_PER_G;
-  y = (float)rawY / ACCEL_LSB_PER_G;
-  z = (float)rawZ / ACCEL_LSB_PER_G;
-
-  return true;
+  return isfinite(xG) && isfinite(yG) && isfinite(zG);
 }
-
-// --------------------------------------------------
-// 5. NETWORK FUNCTIONS
-// --------------------------------------------------
 
 bool postJson(const String& path, JsonDocument& payload) {
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi disconnected. Cannot send data.");
+    Serial.println("POST skipped: Wi-Fi disconnected.");
     return false;
   }
 
   HTTPClient http;
-
-  String url = String(API_BASE) + path;
+  const String url = String(API_BASE) + path;
 
   if (!http.begin(secureClient, url)) {
-    Serial.println("HTTPS initialisation failed.");
+    Serial.println("Could not initialise HTTPS request.");
     return false;
   }
 
   http.addHeader("Content-Type", "application/json");
-
   String body;
   serializeJson(payload, body);
 
-  int status = http.POST(body);
+  const int status = http.POST(body);
+  Serial.printf("POST %s -> HTTP %d\n", path.c_str(), status);
 
-  Serial.printf(
-    "POST %s -> HTTP %d\n",
-    path.c_str(),
-    status
-  );
-
-  if (status > 0) {
-    Serial.println(http.getString());
-  } else {
-    Serial.println(http.errorToString(status));
-  }
+  if (status > 0) Serial.println(http.getString());
+  else Serial.printf("HTTP error: %s\n", http.errorToString(status).c_str());
 
   http.end();
-
   return status >= 200 && status < 300;
 }
 
-// --------------------------------------------------
-// 6. DEVICE REGISTRATION
-// --------------------------------------------------
-
 void registerDevice() {
   StaticJsonDocument<384> doc;
-
   doc["deviceId"] = DEVICE_ID;
   doc["name"] = DEVICE_NAME;
-  doc["firmware"] = FIRMWARE;
-  doc["connectivity"] = "Wi-Fi";
   doc["status"] = "offline";
+  doc["connectivity"] = "Wi-Fi";
+  doc["firmware"] = FIRMWARE;
 
   JsonArray sensors = doc.createNestedArray("sensors");
-
   sensors.add("temperature");
   sensors.add("humidity");
   sensors.add("shock");
   sensors.add("ir");
 
-  Serial.println("Registering Cold Chain Guardian device...");
-
+  Serial.println("Registering device. HTTP 409 can mean it is already registered.");
   postJson("/devices", doc);
 }
 
-// --------------------------------------------------
-// 7. HEARTBEAT
-// --------------------------------------------------
-
 void sendHeartbeat() {
   StaticJsonDocument<192> doc;
-
-  int rssi = WiFi.RSSI();
+  const int rssi = WiFi.RSSI();
 
   doc["signalDbm"] = rssi;
-
-  doc["signal"] =
-    rssi > -60 ? "Strong" :
-    rssi > -75 ? "Medium" : "Weak";
-
+  doc["signal"] = rssi > -60 ? "Strong" : (rssi > -75 ? "Medium" : "Weak");
   doc["firmware"] = FIRMWARE;
   doc["connectivity"] = "Wi-Fi";
 
-  postJson(
-    String("/devices/") + DEVICE_ID + "/heartbeat",
-    doc
-  );
+  postJson(String("/devices/") + DEVICE_ID + "/heartbeat", doc);
 }
 
-// --------------------------------------------------
-// 8. TIME SYNCHRONISATION
-// --------------------------------------------------
-
-bool utcTimestamp(char* output, size_t length) {
+bool makeUtcTimestamp(char* output, size_t outputLength) {
   struct tm timeInfo;
+  if (!getLocalTime(&timeInfo, 3000)) return false;
 
-  if (!getLocalTime(&timeInfo, 3000)) {
-    return false;
-  }
-
-  strftime(
-    output,
-    length,
-    "%Y-%m-%dT%H:%M:%S.000Z",
-    &timeInfo
-  );
-
+  strftime(output, outputLength, "%Y-%m-%dT%H:%M:%S.000Z", &timeInfo);
   return true;
 }
 
-// --------------------------------------------------
-// 9. SENSOR DATA COLLECTION
-// --------------------------------------------------
-
-void sendReading() {
+void sendSensorReading() {
   StaticJsonDocument<384> doc;
+  char timestamp[32];
 
-  char recordedAt[32];
-
-  if (!utcTimestamp(recordedAt, sizeof(recordedAt))) {
-    Serial.println("NTP time unavailable. Skipping reading.");
+  if (!makeUtcTimestamp(timestamp, sizeof(timestamp))) {
+    Serial.println("NTP time unavailable; skipping sample.");
     return;
   }
 
-  doc["recordedAt"] = recordedAt;
+  doc["recordedAt"] = timestamp;
+  bool hasMeasurement = false;
 
-  bool hasValue = false;
-
-  Serial.println("\n========== SENSOR READINGS ==========");
-
-  // ----------------------------------------------
-  // DS18B20 TEMPERATURE
-  // ----------------------------------------------
-
+  // DS18B20: temperature in degrees Celsius.
   if (dsReady) {
     ds18b20.requestTemperatures();
+    const float temperatureC = ds18b20.getTempCByIndex(0);
 
-    float temperature = ds18b20.getTempCByIndex(0);
-
-    if (
-      temperature != DEVICE_DISCONNECTED_C &&
-      isfinite(temperature) &&
-      temperature >= -55.0 &&
-      temperature <= 125.0
-    ) {
-      doc["temperature"] = temperature;
-
-      hasValue = true;
-
-      Serial.printf(
-        "DS18B20 Temperature: %.2f C\n",
-        temperature
-      );
+    if (temperatureC != DEVICE_DISCONNECTED_C &&
+        isfinite(temperatureC) &&
+        temperatureC >= -55.0f && temperatureC <= 125.0f) {
+      doc["temperature"] = temperatureC;
+      hasMeasurement = true;
+      Serial.printf("DS18B20: %.2f C\n", temperatureC);
     } else {
-      Serial.println("DS18B20 reading failed.");
+      Serial.println("DS18B20 read failed.");
     }
   }
 
-  // ----------------------------------------------
-  // DHT11 HUMIDITY
-  // ----------------------------------------------
+  // DHT11: humidity is transmitted; temperature is printed for reference.
+  const float humidity = dht.readHumidity();
+  const float dhtTemperature = dht.readTemperature();
 
-  float humidity = dht.readHumidity();
-  float dhtTemperature = dht.readTemperature();
-
-  if (
-    isfinite(humidity) &&
-    humidity >= 0 &&
-    humidity <= 100
-  ) {
+  if (isfinite(humidity) && humidity >= 0.0f && humidity <= 100.0f) {
     doc["humidity"] = humidity;
-
-    hasValue = true;
-
-    Serial.printf(
-      "DHT11 Humidity: %.1f %%RH\n",
-      humidity
-    );
+    hasMeasurement = true;
+    Serial.printf("DHT11 humidity: %.1f %%RH\n", humidity);
   } else {
-    Serial.println("DHT11 humidity reading failed.");
+    Serial.println("DHT11 humidity read failed.");
   }
 
   if (isfinite(dhtTemperature)) {
-    Serial.printf(
-      "DHT11 Temperature (reference): %.1f C\n",
-      dhtTemperature
-    );
+    Serial.printf("DHT11 temperature (reference): %.1f C\n", dhtTemperature);
   }
 
-  // ----------------------------------------------
-  // MPU ACCELEROMETER / SHOCK
-  // ----------------------------------------------
-
+  // Provisional shock indicator = deviation of acceleration magnitude from 1g.
+  // This is not a calibrated impact peak; field calibration is still required.
   if (mpuReady) {
-    float ax, ay, az;
+    float xG, yG, zG;
 
-    if (readMPUAcceleration(ax, ay, az)) {
+    if (readAcceleration(xG, yG, zG)) {
+      const float magnitudeG = sqrtf(xG*xG + yG*yG + zG*zG);
+      const float shockG = fabsf(magnitudeG - 1.0f);
 
-      float magnitude = sqrtf(
-        ax * ax +
-        ay * ay +
-        az * az
-      );
-
-      // Provisional shock metric:
-      // deviation of acceleration magnitude from 1g.
-      float shock = fabsf(magnitude - 1.0f);
-
-      if (isfinite(shock)) {
-        doc["shock"] = shock;
-
-        hasValue = true;
-
-        Serial.printf(
-          "Acceleration X: %.3f g | Y: %.3f g | Z: %.3f g\n",
-          ax, ay, az
-        );
-
-        Serial.printf(
-          "Acceleration magnitude: %.3f g\n",
-          magnitude
-        );
-
-        Serial.printf(
-          "Shock deviation: %.3f g\n",
-          shock
-        );
+      if (isfinite(shockG)) {
+        doc["shock"] = shockG;
+        hasMeasurement = true;
+        Serial.printf("MPU acceleration X=%.3f Y=%.3f Z=%.3f g; shock indicator=%.3f g\n",
+                      xG, yG, zG, shockG);
       }
     } else {
-      Serial.println("MPU acceleration read failed.");
+      Serial.println("MPU accelerometer read failed.");
     }
   }
 
-  // ----------------------------------------------
-  // CAAV-023 IR SENSOR
-  // ----------------------------------------------
-
-  bool irRawHigh =
-    digitalRead(CAAV023_OUT_PIN) == HIGH;
-
-  bool irDetected =
-    IR_ACTIVE_LOW ? !irRawHigh : irRawHigh;
+  // CAAV-023 digital proximity state. It is not ethylene or door status.
+  const bool outputHigh = digitalRead(IR_OUT_PIN) == HIGH;
+  const bool irDetected = IR_ACTIVE_LOW ? !outputHigh : outputHigh;
 
   doc["irDetected"] = irDetected;
+  hasMeasurement = true;
+  Serial.printf("CAAV-023 IR: %s (OUT=%s)\n",
+                irDetected ? "DETECTED" : "clear",
+                outputHigh ? "HIGH" : "LOW");
 
-  hasValue = true;
-
-  Serial.printf(
-    "CAAV-023 IR: %s | OUT: %s\n",
-    irDetected ? "DETECTED" : "CLEAR",
-    irRawHigh ? "HIGH" : "LOW"
-  );
-
-  // ----------------------------------------------
-  // SEND DATA TO BACKEND
-  // ----------------------------------------------
-
-  if (!hasValue) {
-    Serial.println("No valid sensor measurements.");
+  if (!hasMeasurement) {
+    Serial.println("No valid sensor measurements; not posting.");
     return;
   }
 
-  Serial.println("Sending sensor data to backend:");
-
-  serializeJsonPretty(doc, Serial);
+  Serial.print("Sending sensor payload: ");
+  serializeJson(doc, Serial);
   Serial.println();
 
-  postJson(
-    String("/devices/") + DEVICE_ID + "/readings",
-    doc
-  );
-
-  Serial.println("=====================================");
+  postJson(String("/devices/") + DEVICE_ID + "/readings", doc);
 }
 
-// --------------------------------------------------
-// 10. SETUP
-// --------------------------------------------------
-
-void setup() {
-  Serial.begin(115200);
-
-  delay(1000);
-
-  Serial.println();
-  Serial.println("====================================");
-  Serial.println("       COLD CHAIN GUARDIAN");
-  Serial.println("       ESP32 SENSOR FIRMWARE");
-  Serial.println("====================================");
-
-  // IR sensor.
-  pinMode(CAAV023_OUT_PIN, INPUT);
-
-  // DHT11.
-  dht.begin();
-
-  // DS18B20.
-  ds18b20.begin();
-
-  int deviceCount = ds18b20.getDeviceCount();
-
-  dsReady = deviceCount > 0;
-
-  Serial.printf(
-    "DS18B20 devices found: %d\n",
-    deviceCount
-  );
-
-  // MPU.
-  Wire.begin(MPU_SDA_PIN, MPU_SCL_PIN);
-
-  mpuReady = initialiseMPU();
-
-  // WiFi.
+void connectWiFi() {
   WiFi.mode(WIFI_STA);
-
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  Serial.print("Connecting to WiFi");
+  Serial.print("Connecting to Wi-Fi");
+  const unsigned long startedAt = millis();
 
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED &&
+         millis() - startedAt < 30000UL) {
     delay(500);
     Serial.print(".");
   }
 
   Serial.println();
 
-  Serial.println("WiFi connected.");
-
-  Serial.print("ESP32 IP address: ");
-  Serial.println(WiFi.localIP());
-
-  // Temporary HTTPS configuration for testing.
-  // Replace with certificate validation before production.
-  secureClient.setInsecure();
-
-  // UTC time.
-  configTime(
-    0,
-    0,
-    "pool.ntp.org",
-    "time.nist.gov"
-  );
-
-  Serial.println("Synchronising time...");
-
-  bool timeReady = false;
-
-  for (int i = 0; i < 20; i++) {
-    struct tm timeInfo;
-
-    if (getLocalTime(&timeInfo, 1000)) {
-      timeReady = true;
-      break;
-    }
-
-    delay(250);
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print("ESP32 IP: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("Wi-Fi connection timed out; loop will retry.");
   }
-
-  Serial.println(
-    timeReady ? "Clock synchronised." :
-                "NTP synchronisation pending."
-  );
-
-  // Backend registration and heartbeat.
-  registerDevice();
-
-  sendHeartbeat();
-
-  lastHeartbeatAt = millis();
-  lastSampleAt = millis();
-
-  Serial.println();
-  Serial.println("All sensor initialisation complete.");
-  Serial.println("Live monitoring started.");
 }
 
-// --------------------------------------------------
-// 11. MAIN LOOP
-// --------------------------------------------------
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+
+  pinMode(IR_OUT_PIN, INPUT);
+  dht.begin();
+
+  ds18b20.begin();
+  dsReady = ds18b20.getDeviceCount() > 0;
+  Serial.printf("DS18B20 devices found: %d\n", ds18b20.getDeviceCount());
+
+  Wire.begin(MPU_SDA_PIN, MPU_SCL_PIN);
+  mpuReady = initialiseMpu();
+
+  connectWiFi();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    // Temporary for initial Codespaces HTTPS testing only.
+    // Replace with CA certificate validation before production.
+    secureClient.setInsecure();
+
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+    Serial.println("Waiting for network time...");
+
+    for (int i = 0; i < 20; i++) {
+      struct tm timeInfo;
+      if (getLocalTime(&timeInfo, 1000)) {
+        Serial.println("Clock synchronised.");
+        break;
+      }
+      delay(250);
+    }
+
+    registerDevice();
+    sendHeartbeat();
+    lastHeartbeatAt = millis();
+  }
+
+  lastSampleAt = millis();
+  Serial.println("Sensor initialisation complete; monitoring loop started.");
+}
 
 void loop() {
-
-  // Reconnect WiFi if disconnected.
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi lost. Reconnecting...");
-
+    Serial.println("Wi-Fi disconnected; attempting reconnection.");
     WiFi.reconnect();
-
     delay(1000);
-
     return;
   }
 
-  unsigned long now = millis();
+  const unsigned long now = millis();
 
-  // Heartbeat every 30 seconds.
-  if (
-    now - lastHeartbeatAt >= HEARTBEAT_INTERVAL_MS
-  ) {
+  if (now - lastHeartbeatAt >= HEARTBEAT_INTERVAL_MS) {
     lastHeartbeatAt = now;
-
     sendHeartbeat();
   }
 
-  // Sensor readings every 5 seconds.
-  if (
-    now - lastSampleAt >= SAMPLE_INTERVAL_MS
-  ) {
+  if (now - lastSampleAt >= SAMPLE_INTERVAL_MS) {
     lastSampleAt = now;
-
-    sendReading();
+    sendSensorReading();
   }
 }
