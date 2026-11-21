@@ -8,6 +8,8 @@
  * HTTPS certificate verification is temporarily disabled for first
  * Codespaces connectivity test. Replace with CA validation before production.
  */
+
+#include "secrets.h"
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
