@@ -1,0 +1,3 @@
+
+# Ignore local Wi-Fi and backend credentials
+secrets.h
