@@ -25,7 +25,7 @@
 #include <DallasTemperature.h>
 #include <Wire.h>
 
-const char* DEVICE_ID = "ESP32-COLD-CHAIN-01";
+const char* DEVICE_ID = "trial01";
 const char* DEVICE_NAME = "Cold Chain Guardian - ESP32";
 const char* FIRMWARE = "1.0.0";
 
