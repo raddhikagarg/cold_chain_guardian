@@ -84,7 +84,7 @@ const sensorReadingSchema = new Schema(
 
     // true means the cargo door is open.
     doorOpen: { type: Boolean },
-    // CAAV-023 IR proximity/obstacle detection state.
+    // Legacy raw CAAV-023 detection field; new ingestion normalizes this to doorOpen.
     irDetected: { type: Boolean },
 
     /*
