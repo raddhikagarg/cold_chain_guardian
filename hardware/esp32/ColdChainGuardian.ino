@@ -246,8 +246,8 @@ void sendSensorReading() {
 
   doc["doorOpen"] = irDetected;
   hasMeasurement = true;
-  Serial.printf("CAAV-023 IR: %s (OUT=%s)\n",
-                irDetected ? "DETECTED" : "clear",
+  Serial.printf("CAAV-023 door status: %s (OUT=%s)\n",
+                irDetected ? "OPEN" : "CLOSED",
                 outputHigh ? "HIGH" : "LOW");
 
   if (!hasMeasurement) {
