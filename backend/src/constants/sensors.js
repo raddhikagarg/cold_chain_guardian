@@ -56,6 +56,7 @@ const SENSOR_CATALOG = Object.freeze({
     model: 'Reed switch',
     unit: 'state',
     kind: 'state',
+    states: Object.freeze(['closed', 'open']),
     decimals: null,
   }),
   ir: Object.freeze({
