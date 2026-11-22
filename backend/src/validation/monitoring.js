@@ -122,10 +122,15 @@ function validateNumericThresholds(sensorId, { warning, critical } = {}) {
 
 /** Validate door expected state and duration thresholds. */
 function validateDoorThresholds({ expectedState, warning, critical } = {}) {
-  const errors = []
-  const label = labelFor('door')
+  return validateStateThresholds('door', { expectedState, warning, critical })
+}
 
-  if (expectedState !== 'open' && expectedState !== 'closed') {
+function validateStateThresholds(sensorId, { expectedState, warning, critical } = {}) {
+  const errors = []
+  const label = labelFor(sensorId)
+  const allowedStates = SENSOR_CATALOG[sensorId]?.states ?? []
+
+  if (!allowedStates.includes(expectedState)) {
     errors.push(`Select the expected state for ${label}.`)
   }
 
@@ -202,7 +207,7 @@ function validateEnabledSensor(sensorId, config = {}) {
 
   if (meta.kind === 'state') {
     errors.push(
-      ...validateDoorThresholds({
+      ...validateStateThresholds(sensorId, {
         expectedState: config.expectedState,
         warning: config.warning,
         critical: config.critical,
