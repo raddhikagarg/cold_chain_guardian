@@ -162,14 +162,14 @@ function createNumericMonitorSchema(sensorId) {
   )
 }
 
-function createDoorMonitorSchema() {
+function createDoorMonitorSchema(sensorId) {
   return new Schema(
     {
       available: { type: Boolean, default: false },
       enabled: { type: Boolean, default: false },
       expectedState: {
         type: String,
-        enum: ['open', 'closed'],
+        enum: sensorId === 'ir' ? ['detected', 'not-detected'] : ['open', 'closed'],
         default: null,
       },
       warning: {
@@ -201,7 +201,7 @@ function createMonitoringSchema() {
     paths[sensorId] = {
       type:
         SENSOR_CATALOG[sensorId].kind === 'state'
-          ? createDoorMonitorSchema()
+          ? createDoorMonitorSchema(sensorId)
           : createNumericMonitorSchema(sensorId),
       default: () => ({}),
     }
