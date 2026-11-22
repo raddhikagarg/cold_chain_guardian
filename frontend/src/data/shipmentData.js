@@ -60,7 +60,10 @@ export const SENSOR_CATALOG = {
     unit: 'state',
     kind: 'state',
     color: '#34d399',
-    states: ['Closed', 'Open'],
+    states: [
+      { value: 'closed', label: 'Closed' },
+      { value: 'open', label: 'Open' },
+    ],
   },
   ethylene: {
     id: 'ethylene',
