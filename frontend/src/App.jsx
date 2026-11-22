@@ -22,7 +22,7 @@ import ShipmentSelector from './components/overview/ShipmentSelector.jsx'
 import SensorAnalytics from './components/shipments/SensorAnalytics.jsx'
 import ExposureSummary from './components/shipments/ExposureSummary.jsx'
 import ShipmentTimelineCard from './components/shipments/ShipmentTimelineCard.jsx'
-import { isActiveStatus } from './utils/shipments.js'
+import { getDeviceAvailability, isActiveStatus } from './utils/shipments.js'
 import { getAllAlerts, summarizeAlerts } from './utils/alerts.js'
 import {
   getDeviceRegistry,
@@ -137,6 +137,8 @@ function App() {
         raw.readings = readings
         const fresh = fromApiShipment(raw)
         setShipments(previous => previous.map(item => item.id === selectedShipmentId ? fresh : item))
+        const deviceRows = await api.devices()
+        if (!cancelled) setDevices(deviceRows.map(fromApiDevice))
         setLastUpdated(formatClock(new Date()))
         setApiError('')
       } catch (error) {
@@ -147,7 +149,7 @@ function App() {
     }
 
     refreshTelemetry()
-    const interval = setInterval(refreshTelemetry, 5000)
+    const interval = setInterval(refreshTelemetry, 3000)
     return () => {
       cancelled = true
       clearInterval(interval)
@@ -292,6 +294,7 @@ function App() {
   const deviceSummary = summarizeDevices(
     getDeviceRegistry(devices, shipments),
   )
+  const availableDeviceCount = getDeviceAvailability(devices, shipments).filter(device => device.available).length
 
   const tempHealthy = currentTemp != null && currentTemp >= SAFE_TEMP_RANGE.min && currentTemp <= SAFE_TEMP_RANGE.max
   const tempNearLimit = currentTemp != null && (currentTemp > SAFE_TEMP_RANGE.max - 0.5 || currentTemp < SAFE_TEMP_RANGE.min + 0.5)
@@ -366,6 +369,22 @@ function App() {
                   tone="critical"
                   status="Action needed"
                   hint={`${criticalAlerts} critical · ${warningAlerts} warnings`}
+                />
+                <MetricCard
+                  label="Total Shipments"
+                  value={shipments.length}
+                  icon={<TruckIcon size={18} />}
+                  tone="info"
+                  status="Fleet records"
+                  hint="All saved shipments, including drafts and completed records"
+                />
+                <MetricCard
+                  label="Available Devices"
+                  value={availableDeviceCount}
+                  icon={<CpuIcon size={18} />}
+                  tone={availableDeviceCount > 0 ? 'ok' : 'warn'}
+                  status="Online and unassigned"
+                  hint={`${deviceSummary.online} reporting · ${deviceSummary.total} registered`}
                 />
                 <MetricCard
                   label="Shipment Status"
