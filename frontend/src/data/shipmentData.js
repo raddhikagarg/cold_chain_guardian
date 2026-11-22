@@ -11,6 +11,7 @@ export const SENSOR_IDS = [
   'temperature',
   'humidity',
   'shock',
+  'ir',
   'light',
   'door',
   'ethylene',
@@ -43,6 +44,18 @@ export const SENSOR_CATALOG = {
     kind: 'numeric',
     decimals: 2,
     color: '#facc15',
+  },
+  ir: {
+    id: 'ir',
+    label: 'IR Detection',
+    model: 'CAAV-023',
+    unit: 'state',
+    kind: 'state',
+    states: [
+      { value: 'not-detected', label: 'No detection' },
+      { value: 'detected', label: 'Detected' },
+    ],
+    color: '#fb923c',
   },
   light: {
     id: 'light',
