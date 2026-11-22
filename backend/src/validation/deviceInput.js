@@ -150,10 +150,12 @@ function validateSensors(value) {
 
   const sensors = []
   for (const sensorId of value) {
-    if (!SENSOR_IDS.includes(sensorId)) {
+    // Backward compatibility: the CAAV-023 IR module is the shipment door-state sensor.
+    const canonicalSensorId = sensorId === 'ir' ? 'door' : sensorId
+    if (!SENSOR_IDS.includes(canonicalSensorId)) {
       badField('sensors', `Unknown sensor "${sensorId}".`)
     }
-    if (!sensors.includes(sensorId)) sensors.push(sensorId)
+    if (!sensors.includes(canonicalSensorId)) sensors.push(canonicalSensorId)
   }
 
   return sensors
