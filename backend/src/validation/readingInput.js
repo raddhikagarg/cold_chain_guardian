@@ -132,7 +132,11 @@ function validateReadingPayload(input) {
     if (typeof input.irDetected !== 'boolean') {
       badField('irDetected', 'irDetected must be a boolean.')
     }
-    measurements.irDetected = input.irDetected
+    // Legacy firmware sends irDetected; interpret CAAV-023 as door open/closed.
+    if (measurements.doorOpen !== undefined && measurements.doorOpen !== input.irDetected) {
+      badField('irDetected', 'irDetected conflicts with doorOpen.')
+    }
+    measurements.doorOpen = input.irDetected
   }
 
   if (Object.keys(measurements).length === 0) {
