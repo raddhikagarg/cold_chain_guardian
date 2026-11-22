@@ -177,7 +177,9 @@ function hasMeasurement(value) {
 }
 
 function measurementFieldFor(sensorId) {
-  return sensorId === 'door' ? 'doorOpen' : sensorId
+  if (sensorId === 'door') return 'doorOpen'
+  if (sensorId === 'ir') return 'irDetected'
+  return sensorId
 }
 
 module.exports = {
