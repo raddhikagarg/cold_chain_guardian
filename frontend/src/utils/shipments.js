@@ -222,7 +222,7 @@ export function formatDate(value) {
 export function formatSensorValue(sensorId, value) {
   const meta = SENSOR_CATALOG[sensorId]
   if (!meta || value == null) return '—'
-  if (meta.kind === 'state') return value ? 'Open' : 'Closed'
+  if (meta.kind === 'state') return meta.states?.[value ? 1 : 0]?.label ?? (value ? 'Open' : 'Closed')
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return '—'
   return `${numeric.toFixed(meta.decimals)} ${meta.unit}`
