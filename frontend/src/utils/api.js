@@ -45,8 +45,9 @@ export function fromApiShipment(s, deviceRows = []) {
     ...s, id: s.shipmentId || s.id, status, lifecycleStatus: s.lifecycleStatus || status,
     deviceId: s.deviceId || s.device?.deviceId || null,
     route: { progress: 0, ...(s.route || {}) },
-    monitoring: Object.fromEntries(['temperature','humidity','shock','ir','light','door','ethylene'].map(id => [id, {
-      available: Boolean(monitoring[id]?.available || (id === 'ir' && assignedDevice?.sensors?.includes('ir'))), enabled: Boolean(monitoring[id]?.enabled),
+    readings: (s.readings || []).map(row => ({ ...row, doorOpen: row.doorOpen ?? row.irDetected ?? null })),
+    monitoring: Object.fromEntries(['temperature','humidity','shock','light','door','ethylene'].map(id => [id, {
+      available: Boolean(monitoring[id]?.available || (id === 'door' && (assignedDevice?.sensors?.includes('door') || assignedDevice?.sensors?.includes('ir')))), enabled: Boolean(monitoring[id]?.enabled),
       warning: monitoring[id]?.warning || monitoring[id]?.acceptable || null,
       critical: monitoring[id]?.critical || null,
       acceptable: monitoring[id]?.acceptable || monitoring[id]?.warning || null,
@@ -65,7 +66,8 @@ export function fromApiShipment(s, deviceRows = []) {
 export function fromApiDevice(d) {
   return {
     ...d, id: d.deviceId || d.id,
-    sensors: d.sensors || [],
+    // CAAV-023 is the fitted door-state sensor. Older registrations called it `ir`.
+    sensors: [...new Set((d.sensors || []).map(sensorId => sensorId === 'ir' ? 'door' : sensorId))],
     connectivity: d.connectivity || 'Wi-Fi',
     signal: d.signal || 'Unknown',
     hardware: d.hardware || {},
