@@ -18,7 +18,10 @@ function formatMeasurement(value, sensorId) {
   if (value === null || value === undefined) return null
   const meta = SENSOR_CATALOG[sensorId]
   if (!meta) return String(value)
-  if (meta.kind === 'state') return value === true ? 'Open' : 'Closed'
+  if (meta.kind === 'state') {
+    if (sensorId === 'ir') return value === true ? 'Detected' : 'No detection'
+    return value === true ? 'Open' : 'Closed'
+  }
 
   const number = Number(value)
   if (!Number.isFinite(number)) return null
