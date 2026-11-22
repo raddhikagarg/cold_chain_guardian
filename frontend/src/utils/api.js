@@ -67,7 +67,8 @@ export function fromApiDevice(d) {
     connectivity: d.connectivity || 'Wi-Fi',
     signal: d.signal || 'Unknown',
     hardware: d.hardware || {},
-    lastSeenAt: d.lastSeenAt,
+    lastSeen: d.lastSeenAt || d.lastSeen || null,
+    lastSeenAt: d.lastSeenAt || d.lastSeen || null,
     assignedShipmentId: d.assignedShipment?.shipmentId || null,
     deviceEvents: [],
   }
