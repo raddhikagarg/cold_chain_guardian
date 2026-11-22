@@ -56,7 +56,7 @@ export const SENSOR_CATALOG = {
   door: {
     id: 'door',
     label: 'Door Status',
-    model: 'Reed switch',
+    model: 'CAAV-023 IR door sensor',
     unit: 'state',
     kind: 'state',
     color: '#34d399',
