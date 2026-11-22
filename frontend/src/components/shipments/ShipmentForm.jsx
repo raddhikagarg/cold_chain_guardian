@@ -62,7 +62,7 @@ function validateCargoThresholds(form, device) {
     const config = form.monitoring[sensorId]
 
     if (meta.kind === 'state') {
-      if (config.expectedState !== 'open' && config.expectedState !== 'closed') {
+      if (!meta.states?.some((state) => state.value === config.expectedState)) {
         errors.push(`Select the expected state for ${meta.label}.`)
       }
 
