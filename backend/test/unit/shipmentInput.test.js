@@ -275,6 +275,20 @@ test('validateMonitoringAvailability rejects sensors the device lacks', () => {
   )
 })
 
+test('validateMonitoringAvailability treats legacy IR as the door sensor', () => {
+  const shipment = {
+    monitoring: {
+      door: { available: true, enabled: true },
+    },
+  }
+
+  assert.doesNotThrow(() =>
+    validateMonitoringAvailability(shipment, {
+      sensors: ['temperature', 'humidity', 'ir'],
+    }),
+  )
+})
+
 test('validateMonitoringAvailability allows fitted or disabled sensors', () => {
   const shipment = {
     monitoring: {
