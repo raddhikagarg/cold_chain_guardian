@@ -232,6 +232,7 @@ function presentLatestReading(reading) {
     light: plain.light ?? null,
     ethylene: plain.ethylene ?? null,
     doorOpen: plain.doorOpen ?? null,
+    irDetected: plain.irDetected ?? null,
     createdAt: toIso(plain.createdAt),
   }
 }
