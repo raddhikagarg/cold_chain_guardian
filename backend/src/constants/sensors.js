@@ -64,6 +64,7 @@ const SENSOR_CATALOG = Object.freeze({
     model: 'CAAV-023',
     unit: 'state',
     kind: 'state',
+    states: Object.freeze(['not-detected', 'detected']),
     decimals: null,
   }),
   ethylene: Object.freeze({
