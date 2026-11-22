@@ -277,7 +277,13 @@ function validateShipmentConfiguration(shipment) {
  */
 function validateMonitoringAvailability(shipment, device) {
   const monitoring = toPlain(shipment.monitoring) ?? {}
-  const fitted = new Set(device?.sensors ?? [])
+  // Backward compatibility: older device records may still store the CAAV-023
+  // door sensor under the legacy `ir` identifier. Treat it as the canonical
+  // `door` capability when validating shipment monitoring, just as the
+  // frontend and current device-registration API already do.
+  const fitted = new Set(
+    (device?.sensors ?? []).map((sensorId) => (sensorId === 'ir' ? 'door' : sensorId)),
+  )
   const errors = []
 
   SENSOR_IDS.forEach((sensorId) => {
