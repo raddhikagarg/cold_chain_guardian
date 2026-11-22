@@ -43,7 +43,7 @@ export function fromApiShipment(s) {
     ...s, id: s.shipmentId || s.id, status, lifecycleStatus: s.lifecycleStatus || status,
     deviceId: s.deviceId || s.device?.deviceId || null,
     route: { progress: 0, ...(s.route || {}) },
-    monitoring: Object.fromEntries(['temperature','humidity','shock','light','door','ethylene'].map(id => [id, {
+    monitoring: Object.fromEntries(['temperature','humidity','shock','ir','light','door','ethylene'].map(id => [id, {
       available: Boolean(monitoring[id]?.available), enabled: Boolean(monitoring[id]?.enabled),
       warning: monitoring[id]?.warning || monitoring[id]?.acceptable || null,
       critical: monitoring[id]?.critical || null,
