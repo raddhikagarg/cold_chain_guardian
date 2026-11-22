@@ -28,15 +28,10 @@ function getReadingState(meta, config, latest) {
   if (!latest) return { tone: 'muted', label: 'Awaiting readings' }
 
   if (meta.kind === 'state') {
-    const isOpen = latest.value === 1
+    const state = meta.states?.[latest.value === 1 ? 1 : 0]
     const expectedState = getExpectedDoorState(config)
-    // Without an expected state, the historical default is a closed door.
-    const abnormal = expectedState
-      ? expectedState === 'open'
-        ? !isOpen
-        : isOpen
-      : isOpen
-    const current = isOpen ? 'Door open' : 'Door closed'
+    const abnormal = expectedState ? expectedState !== state?.value : latest.value === 1
+    const current = state?.label ?? (latest.value === 1 ? 'Active' : 'Inactive')
     return {
       tone: abnormal ? 'warn' : 'ok',
       label: abnormal ? `Unexpected: ${current.toLowerCase()}` : current,
@@ -66,7 +61,7 @@ function SensorAnalytics({ shipment }) {
   const device = null
   const deviceConnectionState = null
   const deviceReadingsStale = false
-  const series = config.available ? (shipment.readings || []).map(row => ({ timestamp: new Date(row.recordedAt).getTime(), value: activeSensor === 'door' ? (row.doorOpen ? 1 : 0) : row[activeSensor] })).filter(point => point.value != null && Number.isFinite(point.timestamp)) : []
+  const series = config.available ? (shipment.readings || []).map(row => ({ timestamp: new Date(row.recordedAt).getTime(), value: activeSensor === 'door' ? (row.doorOpen ? 1 : 0) : activeSensor === 'ir' ? (row.irDetected ? 1 : 0) : row[activeSensor] })).filter(point => point.value != null && Number.isFinite(point.timestamp)) : []
   const latest = series.length > 0 ? series[series.length - 1] : null
   const state = getReadingState(meta, config, latest)
   const warningRange = getMonitoringRange(config)
