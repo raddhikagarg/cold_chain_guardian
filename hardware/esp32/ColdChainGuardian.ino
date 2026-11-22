@@ -150,7 +150,7 @@ void registerDevice() {
   sensors.add("temperature");
   sensors.add("humidity");
   sensors.add("shock");
-  sensors.add("ir");
+  sensors.add("door");
 
   Serial.println("Registering device. HTTP 409 can mean it is already registered.");
   postJson("/devices", doc);
@@ -240,11 +240,11 @@ void sendSensorReading() {
     }
   }
 
-  // CAAV-023 digital proximity state. It is not ethylene or door status.
+  // CAAV-023 is installed as the cargo-door state detector.
   const bool outputHigh = digitalRead(IR_OUT_PIN) == HIGH;
   const bool irDetected = IR_ACTIVE_LOW ? !outputHigh : outputHigh;
 
-  doc["irDetected"] = irDetected;
+  doc["doorOpen"] = irDetected;
   hasMeasurement = true;
   Serial.printf("CAAV-023 IR: %s (OUT=%s)\n",
                 irDetected ? "DETECTED" : "clear",
