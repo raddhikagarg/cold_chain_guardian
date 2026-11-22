@@ -53,7 +53,7 @@ const SENSOR_CATALOG = Object.freeze({
   door: Object.freeze({
     id: 'door',
     label: 'Door Status',
-    model: 'Reed switch',
+    model: 'CAAV-023 IR door sensor',
     unit: 'state',
     kind: 'state',
     states: Object.freeze(['closed', 'open']),
@@ -61,7 +61,7 @@ const SENSOR_CATALOG = Object.freeze({
   }),
   ir: Object.freeze({
     id: 'ir',
-    label: 'IR Detection',
+    label: 'Legacy IR alias (door status)',
     model: 'CAAV-023',
     unit: 'state',
     kind: 'state',
