@@ -103,7 +103,7 @@ function App() {
         const [health, shipmentRows, deviceRows] = await Promise.all([api.health(), api.shipments(), api.devices()])
         if (health.status !== 'ok' || health.database !== 'connected') throw new Error(`Backend degraded (database: ${health.database || 'unknown'})`)
         if (!alive) return
-        const normalized = shipmentRows.map(fromApiShipment)
+        const normalized = shipmentRows.map(row => fromApiShipment(row, deviceRows))
         setShipments(normalized)
         setDevices(deviceRows.map(fromApiDevice))
         setSelectedShipmentId(getDefaultShipmentId(normalized))
@@ -129,15 +129,15 @@ function App() {
       if (refreshing) return
       refreshing = true
       try {
-        const [raw, readings] = await Promise.all([
+        const [raw, readings, deviceRows] = await Promise.all([
           api.shipment(selectedShipmentId),
           api.shipmentReadings(selectedShipmentId),
+          api.devices(),
         ])
         if (cancelled) return
         raw.readings = readings
-        const fresh = fromApiShipment(raw)
+        const fresh = fromApiShipment(raw, deviceRows)
         setShipments(previous => previous.map(item => item.id === selectedShipmentId ? fresh : item))
-        const deviceRows = await api.devices()
         if (!cancelled) setDevices(deviceRows.map(fromApiDevice))
         setLastUpdated(formatClock(new Date()))
         setApiError('')
