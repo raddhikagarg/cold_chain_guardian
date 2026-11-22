@@ -106,7 +106,7 @@ function AlertConfiguration({
                     </span>
                     <strong>{meta.label}</strong>
                     <span className="alert-policy__unit">
-                      {isState ? 'Open / Closed' : meta.unit}
+                      {isState ? meta.states?.map((state) => state.label).join(' / ') : meta.unit}
                     </span>
                   </header>
 
@@ -125,8 +125,9 @@ function AlertConfiguration({
                             }
                           >
                             <option value="">Select expected state…</option>
-                            <option value="closed">Closed</option>
-                            <option value="open">Open</option>
+                            {meta.states?.map((state) => (
+                              <option key={state.value} value={state.value}>{state.label}</option>
+                            ))}
                           </select>
                         </label>
                         <ThresholdInput
@@ -151,7 +152,7 @@ function AlertConfiguration({
                         />
                       </div>
                       <p className="alert-policy__note">
-                        Durations are in minutes and apply while the door remains
+                        Durations are in minutes and apply while the sensor remains
                         in the unexpected state.
                       </p>
                     </>
