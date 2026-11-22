@@ -5,7 +5,7 @@ const HEIGHT = 280
 const PAD = { top: 18, right: 20, bottom: 34, left: 54 }
 
 function formatAxisValue(value, meta) {
-  if (meta.kind === 'state') return value === 1 ? 'Open' : 'Closed'
+  if (meta.kind === 'state') return meta.states?.[value === 1 ? 1 : 0]?.label ?? (value === 1 ? 'Open' : 'Closed')
   return Number(value).toFixed(meta.decimals)
 }
 
@@ -138,9 +138,9 @@ function SensorChart({ series, meta, config, historical = false }) {
   }
 
   const isStateExcursion = (value) => {
-    const open = value === 1
-    if (!expectedState) return open
-    return expectedState === 'open' ? !open : open
+    const state = meta.states?.[value === 1 ? 1 : 0]
+    if (!expectedState) return value === 1
+    return expectedState !== state?.value
   }
 
   const formatTimestamp = (timestamp) =>
@@ -209,7 +209,7 @@ function SensorChart({ series, meta, config, historical = false }) {
               textAnchor="end"
               className="sensor-chart__axis-text"
             >
-              {isState ? (value < 0.5 ? 'Closed' : 'Open') : formatAxisValue(value, meta)}
+              {formatAxisValue(value, meta)}
             </text>
           </g>
         ))}
